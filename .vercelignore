@@ -1,0 +1,8 @@
+480p.mp4
+720p.mp4
+artifacts
+test-results
+playwright-report
+node_modules
+.next
+.git

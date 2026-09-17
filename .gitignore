@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+artifacts/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.sites-runtime/
+
+.vercel/
+.env*
+# Preserve local supplied masters without publishing them
+/480p.mp4
+/720p.mp4
