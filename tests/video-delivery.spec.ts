@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-for (const setting of [{ label: 'desktop', width: 1440, height: 900, quality: '720p' }, { label: 'mobile', width: 390, height: 844, quality: '480p' }]) {
-  test(`${setting.label} downloads only its selected encode and keeps it after resize`, async ({ page }) => {
+for (const setting of [{ label: 'desktop', width: 1440, height: 900, quality: '720p' }, { label: 'mobile', width: 390, height: 844, quality: '720p' }]) {
+  test(`${setting.label} downloads only 720p for scrubbing and playback, including after resize`, async ({ page }) => {
     await page.setViewportSize({ width: setting.width, height: setting.height });
     const videoPaths = new Set<string>();
     page.on('request', request => { if (request.url().includes('.mp4')) videoPaths.add(new URL(request.url()).pathname); });
@@ -47,7 +47,7 @@ test('mobile loading and reverse scrubbing under a throttled connection', async 
   await expect(page.locator('.cinematic')).toHaveAttribute('data-mode', 'scrub');
 });
 
-test('reduced motion does not automatically download either video', async ({ page }) => {
+test('reduced motion does not automatically download the video', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const videos: string[] = [];
   page.on('request', request => { if (request.url().includes('.mp4')) videos.push(request.url()); });

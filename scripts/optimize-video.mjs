@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import ffmpeg from 'ffmpeg-static';
 
-const sources = ['720p.mp4', '480p.mp4'];
+const sources = ['720p.mp4'];
 const hash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const originals = sources.map(file => ({ file, hash: hash(file) }));
 const run = args => {
@@ -17,4 +17,4 @@ run(['-ss', '0.05', '-i', '720p.mp4', '-frames:v', '1', '-vf', 'scale=854:-2:fla
 for (const source of originals) {
   if (source.hash !== hash(source.file)) throw new Error(`Master changed: ${source.file}`);
 }
-console.log('Two web encodes and one lightweight poster generated. Both masters are unchanged.');
+console.log('One 720p web encode and one lightweight poster generated. The source master is unchanged.');

@@ -9,6 +9,8 @@ import { Arrow } from "./arrow";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const filmSource = assetPath("/videos/cementing-a-nation-720p.mp4");
+
 const chapters = [
   { year: "1904", label: "A Vision Takes Form", position: 0.08, name: "THE VISION" },
   { year: "MID-1930s", label: "One Stone Changed Everything", position: 0.36, name: "THE FOUNDATION" },
@@ -19,7 +21,6 @@ export function Cinematic() {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  const selectedSource = useRef<string | null>(null);
   const trigger = useRef<ScrollTrigger | null>(null);
   const filmDialog = useRef<HTMLDialogElement>(null);
   const player = useRef<HTMLVideoElement>(null);
@@ -30,13 +31,9 @@ export function Cinematic() {
     const film = video.current;
     const backdrop = stage.current;
     if (!section || !film || !backdrop) return;
-    // Choose once per visit. No server-rendered src means the browser cannot
-    // speculatively download desktop video before checking the device.
-    // Keep the selection on resize/orientation changes to avoid a second asset.
-    selectedSource.current ??= window.matchMedia("(max-width: 767px), (pointer: coarse) and (max-width: 1024px)").matches
-      ? assetPath("/videos/cementing-a-nation-480p.mp4")
-      : assetPath("/videos/cementing-a-nation-720p.mp4");
-    section.dataset.quality = selectedSource.current.includes("480p") ? "480p" : "720p";
+    // Every device uses the same 720p asset. Keep src out of server HTML
+    // so reduced-motion visitors can use the poster without downloading video.
+    section.dataset.quality = "720p";
     const media = gsap.matchMedia();
     media.add({ reduced: "(prefers-reduced-motion: reduce)", motion: "(prefers-reduced-motion: no-preference)" }, context => {
       const reduced = !!context.conditions?.reduced;
@@ -162,7 +159,7 @@ export function Cinematic() {
           .to(section.querySelectorAll(".film-bottom, .film-progress, .watch-film"), { autoAlpha: 0, duration: 0.035 }, 0.96);
         render();
         if (!film.getAttribute("src")) {
-          film.src = selectedSource.current!;
+          film.src = filmSource;
           film.preload = "auto";
           film.load();
         }
@@ -200,8 +197,8 @@ export function Cinematic() {
   const openFilm = () => {
     filmDialog.current?.showModal();
     document.body.style.overflow = "hidden";
-    if (player.current && selectedSource.current && !player.current.getAttribute("src")) {
-      player.current.src = selectedSource.current;
+    if (player.current && !player.current.getAttribute("src")) {
+      player.current.src = filmSource;
       player.current.load();
     }
     player.current?.play().catch(() => { /* Native controls remain available. */ });

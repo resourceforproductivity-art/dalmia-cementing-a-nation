@@ -15,9 +15,9 @@ for (const [file, expectedHash] of Object.entries(expected)) {
   report.originals.push({ file, sha256: hash, preserved: true });
 }
 const webFiles = fs.readdirSync('public/videos').filter(file => file.endsWith('.mp4'));
-if (webFiles.length !== 2) throw new Error('Exactly two MP4 files must be served.');
+if (webFiles.length !== 1) throw new Error('Exactly one 720p MP4 file must be served.');
 for (const file of webFiles) {
-  if (!/^cementing-a-nation-(480|720)p\.mp4$/.test(file)) throw new Error(`Unexpected web video: ${file}`);
+  if (file !== 'cementing-a-nation-720p.mp4') throw new Error(`Unexpected web video: ${file}`);
   const path = `public/videos/${file}`;
   const bytes = fs.readFileSync(path);
   const boxes = [];
