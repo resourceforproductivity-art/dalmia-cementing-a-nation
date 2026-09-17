@@ -44,28 +44,60 @@ function cloudTexture(seed: number, warm: boolean) {
   return canvas;
 }
 
-function moteTexture() {
+function moteTexture(sharp = false) {
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 32;
+  canvas.width = canvas.height = 48;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
-  const glow = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-  glow.addColorStop(0, "rgba(242,226,192,.8)");
-  glow.addColorStop(.18, "rgba(222,209,184,.55)");
-  glow.addColorStop(.5, "rgba(218,204,177,.16)");
-  glow.addColorStop(1, "rgba(218,204,177,0)");
+  const glow = ctx.createRadialGradient(22, 21, 0, 24, 24, 24);
+  glow.addColorStop(0, "rgba(255,239,204,.95)");
+  glow.addColorStop(.24, "rgba(239,219,180,.82)");
+  glow.addColorStop(.55, "rgba(208,193,159,.3)");
+  glow.addColorStop(1, "rgba(208,193,159,0)");
   ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 32, 32);
+  ctx.fillRect(0, 0, 48, 48);
+  if (sharp) {
+    // An irregular, shaded mineral grain, with a brighter face toward the light.
+    const mineral = ctx.createLinearGradient(15, 12, 32, 36);
+    mineral.addColorStop(0, "rgba(255,245,218,.98)");
+    mineral.addColorStop(.4, "rgba(227,210,175,.9)");
+    mineral.addColorStop(1, "rgba(134,132,119,.5)");
+    ctx.fillStyle = mineral;
+    ctx.beginPath();
+    ctx.moveTo(18, 12); ctx.lineTo(29, 14); ctx.lineTo(35, 23);
+    ctx.lineTo(29, 34); ctx.lineTo(18, 32); ctx.lineTo(13, 22);
+    ctx.closePath(); ctx.fill();
+  }
+  return canvas;
+}
+
+function beamTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 192; canvas.height = 384;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const image = ctx.createImageData(canvas.width, canvas.height);
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const u = x / canvas.width * 2 - 1, v = y / canvas.height;
+      const core = Math.pow(clamp(1 - Math.abs(u) / (.035 + v * .9)), 2.2);
+      const fade = smooth(v / .045) * Math.pow(1 - v, .5);
+      const i = (y * canvas.width + x) * 4;
+      image.data[i] = 249; image.data[i + 1] = 226; image.data[i + 2] = 184;
+      image.data[i + 3] = Math.round(core * fade * 200);
+    }
+  }
+  ctx.putImageData(image, 0, 0);
   return canvas;
 }
 
 const clouds = [
-  { x: -.85, y: .02, z: 1100, width: 1.85, height: .76, opacity: .46, speed: .17, warm: false, near: false },
-  { x: .94, y: -.02, z: 820, width: 1.58, height: .72, opacity: .39, speed: -.13, warm: true, near: false },
-  { x: -.6, y: .82, z: 560, width: 2.25, height: .8, opacity: .57, speed: .14, warm: true, near: false },
-  { x: .8, y: .63, z: 720, width: 1.75, height: .67, opacity: .44, speed: -.18, warm: false, near: false },
-  { x: -1.12, y: .97, z: 140, width: 1.7, height: .82, opacity: .22, speed: .1, warm: true, near: true },
-  { x: 1.12, y: .85, z: 220, width: 1.7, height: .76, opacity: .17, speed: -.11, warm: false, near: true },
+  { x: -.85, y: .02, z: 1100, width: 1.85, height: .76, opacity: .57, speed: .17, warm: false, near: false },
+  { x: .94, y: -.02, z: 820, width: 1.58, height: .72, opacity: .51, speed: -.13, warm: true, near: false },
+  { x: -.6, y: .82, z: 560, width: 2.25, height: .8, opacity: .67, speed: .14, warm: true, near: false },
+  { x: .8, y: .63, z: 720, width: 1.75, height: .67, opacity: .56, speed: -.18, warm: false, near: false },
+  { x: -1.12, y: .97, z: 140, width: 1.7, height: .82, opacity: .28, speed: .1, warm: true, near: true },
+  { x: 1.12, y: .85, z: 220, width: 1.7, height: .76, opacity: .23, speed: -.11, warm: false, near: true },
 ];
 
 export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasElement): () => void {
@@ -75,16 +107,19 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
   const warmCloud = cloudTexture(739, true);
   const coolCloud = cloudTexture(162, false);
   const mote = moteTexture();
+  const grain = moteTexture(true);
+  const beam = beamTexture();
   const random = randomGenerator(1939);
-  const particles = Array.from({ length: 82 }, (_, index) => ({
+  const particles = Array.from({ length: 176 }, (_, index) => ({
     x: (random() - .5) * 2.6, y: (random() - .5) * 2.2, z: random() * 1500,
-    radius: .65 + random() * 1.2, alpha: .2 + random() * .36,
-    phase: random() * Math.PI * 2, speed: .5 + random() * .9, near: index < 12,
+    radius: 1.05 + random() * 1.7, alpha: .38 + random() * .38,
+    offsetX: 0, offsetY: 0,
+    phase: random() * Math.PI * 2, speed: .5 + random() * .9, near: index % 7 === 0,
   }));
   let width = 1, height = 1, backRatio = 1, frontRatio = 1, mobile = false;
   let resizePending = true, frame = 0, lastFrame = 0, elapsed = 0, disposed = false;
   let targetScroll = window.scrollY, scroll = targetScroll;
-  const pointer = { x: 0, y: 0, targetX: 0, targetY: 0 };
+  const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, windX: 0, windY: 0, active: false };
   const dialogs = Array.from(document.querySelectorAll("dialog"));
   const readingAreas = Array.from(document.querySelectorAll(".cinematic-finale h1, .chapter, .about-heading h2, .about-copy, .world-heading, .world-panel > p, .closing-main, .site-footer"));
   let readingRects: DOMRect[] = [], lastReadingScroll = -1;
@@ -92,10 +127,17 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
   const onScroll = () => { targetScroll = window.scrollY; };
   const onPointer = (event: PointerEvent) => {
     if (mobile || event.pointerType !== "mouse") return;
-    pointer.targetX = event.clientX / width - .5;
-    pointer.targetY = event.clientY / height - .5;
+    const nextX = event.clientX / width - .5;
+    const nextY = event.clientY / height - .5;
+    if (pointer.active) {
+      pointer.windX = clamp(pointer.windX + (nextX - pointer.targetX) * 90, -28, 28);
+      pointer.windY = clamp(pointer.windY + (nextY - pointer.targetY) * 65, -20, 20);
+    }
+    pointer.active = true;
+    pointer.targetX = nextX;
+    pointer.targetY = nextY;
   };
-  const resetPointer = () => { pointer.targetX = pointer.targetY = 0; };
+  const resetPointer = () => { pointer.targetX = pointer.targetY = 0; pointer.active = false; };
   const size = () => {
     width = document.documentElement.clientWidth;
     height = window.innerHeight;
@@ -121,8 +163,10 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
     elapsed += dt;
     if (resizePending) size();
     scroll += (targetScroll - scroll) * (1 - Math.exp(-dt * 6));
-    pointer.x += (pointer.targetX - pointer.x) * (1 - Math.exp(-dt * 3));
-    pointer.y += (pointer.targetY - pointer.y) * (1 - Math.exp(-dt * 3));
+    pointer.x += (pointer.targetX - pointer.x) * (1 - Math.exp(-dt * 5.5));
+    pointer.y += (pointer.targetY - pointer.y) * (1 - Math.exp(-dt * 5.5));
+    pointer.windX *= Math.exp(-dt * 2.3);
+    pointer.windY *= Math.exp(-dt * 2.3);
     distant.setTransform(backRatio, 0, 0, backRatio, 0, 0);
     close.setTransform(frontRatio, 0, 0, frontRatio, 0, 0);
     distant.clearRect(0, 0, width, height);
@@ -134,19 +178,10 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
       lastReadingScroll = targetScroll;
     }
 
-    // A quiet shaft of warm light makes the suspended dust feel illuminated.
-    distant.save();
-    distant.translate(width * .14 - pointer.x * 8, -height * .1);
-    distant.rotate(-.3);
-    const shaft = distant.createLinearGradient(0, 0, width * .54, 0);
-    shaft.addColorStop(0, "rgba(219,195,148,0)");
-    shaft.addColorStop(.32, "rgba(219,195,148,.014)");
-    shaft.addColorStop(.44, "rgba(227,205,163,.045)");
-    shaft.addColorStop(.58, "rgba(219,195,148,.013)");
-    shaft.addColorStop(1, "rgba(219,195,148,0)");
-    distant.fillStyle = shaft;
-    distant.fillRect(0, 0, width * .54, height * 1.4);
-    distant.restore();
+    const lightX = width * (.1 + pointer.x * .1);
+    const lightTarget = width * (.66 + pointer.x * .4);
+    const lightY = -height * .16;
+    const lightDepth = height * 1.5;
 
     for (const cloud of clouds) {
       if (mobile && cloud.near) continue;
@@ -154,15 +189,30 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
       const perspective = (700 + cloud.z) / (700 + cloud.z - camera);
       const drift = Math.sin(elapsed * .027 + cloud.z) * .12 + elapsed * cloud.speed * .013;
       const x = width * (.5 + (cloud.x * .5 + Math.sin(drift) * .34) * perspective)
-        - pointer.x * (cloud.near ? 75 : 26) * perspective;
+        - pointer.x * (cloud.near ? 240 : 105) * perspective + pointer.windX * (cloud.near ? 1.4 : .65);
       const y = height * (.5 + cloud.y * .5 * perspective)
-        + Math.sin(elapsed * .045 + cloud.z) * 14 - pointer.y * (cloud.near ? 45 : 14)
-        - scroll * (cloud.near ? .011 : .003);
+        + Math.sin(elapsed * .045 + cloud.z) * 14 - pointer.y * (cloud.near ? 135 : 65)
+        - scroll * (cloud.near ? .011 : .003) + pointer.windY * (cloud.near ? 1 : .45);
       const w = width * cloud.width * perspective;
       const h = height * cloud.height * perspective;
       context.globalAlpha = cloud.opacity * strength * (mobile ? .74 : 1);
       context.drawImage(cloud.warm ? warmCloud : coolCloud, x - w / 2, y - h / 2, w, h);
     }
+
+    // Broad, feathered light shafts scatter through the thicker dust banks.
+    distant.save();
+    distant.globalCompositeOperation = "screen";
+    for (const [spread, alpha, breadth] of [[-.13, .6, .39], [.04, .87, .25], [.2, .48, .32]]) {
+      const dx = lightTarget + width * spread - lightX;
+      const length = Math.hypot(dx, lightDepth);
+      distant.save();
+      distant.translate(lightX, lightY);
+      distant.rotate(-Math.atan2(dx, lightDepth));
+      distant.globalAlpha = alpha * strength * (mobile ? .58 : 1);
+      distant.drawImage(beam, -width * breadth / 2, 0, width * breadth, length);
+      distant.restore();
+    }
+    distant.restore();
 
     // Feather the haze around reading areas without cutting rectangular holes.
     distant.save();
@@ -182,23 +232,39 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
     }
     distant.restore();
 
-    const count = mobile ? 30 : particles.length;
+    const count = mobile ? 48 : particles.length;
     for (let i = 0; i < count; i++) {
       const particle = particles[i];
       // Move through a perspective volume; fade depth boundaries before recycling.
       const z = wrap(particle.z - camera * (particle.near ? 2.2 : 1) - elapsed * particle.speed * 2.8, 1500);
       const perspective = 780 / (420 + z);
       const fade = smooth(z / 160) * smooth((1500 - z) / 170);
-      const x = width * .5 + (particle.x * width * .68 + Math.sin(elapsed * .13 + particle.phase) * 18
-        - pointer.x * (particle.near ? 64 : 28)) * perspective;
+      let x = width * .5 + (particle.x * width * .68 + Math.sin(elapsed * .13 + particle.phase) * 18
+        - pointer.x * (particle.near ? 210 : 95)) * perspective;
       const worldY = wrap(particle.y * height + height - elapsed * particle.speed * 4 - scroll * .037, height * 2) - height;
-      const y = height * .5 + (worldY - pointer.y * 24) * perspective;
+      let y = height * .5 + (worldY - pointer.y * (particle.near ? 120 : 60)) * perspective;
+      const dx = x - (pointer.targetX + .5) * width;
+      const dy = y - (pointer.targetY + .5) * height;
+      const distance = Math.hypot(dx, dy);
+      const influence = pointer.active ? Math.pow(clamp(1 - distance / 250), 2) : 0;
+      const displacement = (particle.near ? 115 : 72) * influence;
+      const inverse = 1 / Math.max(distance, 1);
+      // The cursor parts the dust, and a small tangential force gives it a wake.
+      const pushX = (dx * inverse + dy * inverse * .4) * displacement + pointer.windX * influence * 2;
+      const pushY = (dy * inverse - dx * inverse * .4) * displacement + pointer.windY * influence * 2;
+      const response = 1 - Math.exp(-dt * 4.5);
+      particle.offsetX += (pushX - particle.offsetX) * response;
+      particle.offsetY += (pushY - particle.offsetY) * response;
+      x += particle.offsetX; y += particle.offsetY;
       if (x < -20 || x > width + 20 || y < -20 || y > height + 20) continue;
       const context = particle.near ? close : distant;
       const edge = .4 + .6 * smooth(Math.abs(x / width - .5) * 2);
-      context.globalAlpha = particle.alpha * fade * strength * (particle.near ? edge * .76 : .8);
-      const radius = particle.radius * perspective * (particle.near ? 3.4 : 1.4);
-      context.drawImage(mote, x - radius, y - radius, radius * 2, radius * 2);
+      const beamCenter = lightX + (lightTarget - lightX) * (y - lightY) / lightDepth;
+      const illumination = Math.exp(-(((x - beamCenter) / (width * .2)) ** 2));
+      context.globalAlpha = clamp(particle.alpha * fade * strength * (.48 + illumination * .85)
+        * (particle.near ? edge : 1), 0, .92);
+      const radius = particle.radius * perspective * (particle.near ? 5.1 : 2.7) * (mobile ? .8 : 1);
+      context.drawImage(particle.near ? mote : grain, x - radius, y - radius, radius * 2, radius * 2);
     }
     distant.globalAlpha = close.globalAlpha = 1;
   };
@@ -227,7 +293,7 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
     document.documentElement.removeEventListener("pointerleave", resetPointer);
     document.removeEventListener("visibilitychange", visibility);
     back.width = back.height = front.width = front.height = 1;
-    warmCloud.width = warmCloud.height = coolCloud.width = coolCloud.height = mote.width = mote.height = 1;
+    for (const texture of [warmCloud, coolCloud, mote, grain, beam]) texture.width = texture.height = 1;
     back.dataset.state = front.dataset.state = "off";
   };
 }
