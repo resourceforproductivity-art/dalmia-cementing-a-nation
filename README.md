@@ -94,3 +94,15 @@ Brand imagery belongs to its respective owners and is used for this independent 
 ## Limitations
 
 Physical iOS/Safari and Android devices were not available; Chrome and mobile/tablet viewport emulation were tested. Device decoding and network conditions can affect scrubbing; a static finale and native film player are provided as fallbacks. Editorial panels are presentation elements rather than extra pages.
+
+## GitHub Pages alternative
+
+A verified static export is prepared for `/dalmia-cementing-a-nation/`:
+
+```powershell
+npm run build:pages
+```
+
+The result is in `out/`. Local assets, fonts, video selection and navigation support the repository subpath. Desktop and mobile export checks passed with forward/reverse seeks and exactly one video URL per device. `.github/workflows/pages.yml` builds and publishes on pushes to main after Pages is enabled with GitHub Actions as its source.
+
+GitHub returned that the current account plan does not support Pages for this private repository. Publishing with this plan requires approval to make the repository public. The prepared Pages changes have not yet been published, and repository visibility is unchanged. The original masters remain local and excluded from Git and deployment.

@@ -1,5 +1,6 @@
 "use client";
 
+import { assetPath } from "@/lib/asset-path";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
@@ -31,8 +32,8 @@ export function Cinematic() {
     // speculatively download desktop video before checking the device.
     // Keep the selection on resize/orientation changes to avoid a second asset.
     selectedSource.current ??= window.matchMedia("(max-width: 767px), (pointer: coarse) and (max-width: 1024px)").matches
-      ? "/videos/cementing-a-nation-480p.mp4"
-      : "/videos/cementing-a-nation-720p.mp4";
+      ? assetPath("/videos/cementing-a-nation-480p.mp4")
+      : assetPath("/videos/cementing-a-nation-720p.mp4");
     section.dataset.quality = selectedSource.current.includes("480p") ? "480p" : "720p";
     const media = gsap.matchMedia();
     media.add({ reduced: "(prefers-reduced-motion: reduce)", motion: "(prefers-reduced-motion: no-preference)" }, context => {
@@ -205,9 +206,9 @@ export function Cinematic() {
 
   return <>
     <section ref={root} id="cinematic" className="cinematic" data-mode="scrub" data-ready="false" data-chapter="1" aria-label="Cementing a Nation, a cinematic Dalmia Bharat story">
-      <Image className="film-poster" src="/images/film-poster.webp" alt="A sculptural figure beside a monumental stone" fill unoptimized preload sizes="100vw" />
-      <Image className="fallback-poster" src="/images/film-finale.jpg" alt="A cinematic industrial landscape" fill sizes="100vw" />
-      <video ref={video} className="cinematic-video" poster="/images/film-poster.webp" preload="none" muted playsInline disablePictureInPicture aria-hidden="true" tabIndex={-1} />
+      <Image className="film-poster" src={assetPath("/images/film-poster.webp")} alt="A sculptural figure beside a monumental stone" fill unoptimized preload sizes="100vw" />
+      <Image className="fallback-poster" src={assetPath("/images/film-finale.jpg")} alt="A cinematic industrial landscape" fill sizes="100vw" />
+      <video ref={video} className="cinematic-video" poster={assetPath("/images/film-poster.webp")} preload="none" muted playsInline disablePictureInPicture aria-hidden="true" tabIndex={-1} />
       <div className="film-shade" /><div className="film-vignette" />
       <div className="film-heading eyebrow"><span className="red-rule" /> CEMENTING A NATION <span className="film-heading-divider" /> A DALMIA BHARAT STORY</div>
       <p className="sr-only">Cementing a Nation. 1904: A Vision Takes Form. Mid-1930s: One Stone Changed Everything. 1939: Industry Rose. Communities Grew.</p>
@@ -237,11 +238,8 @@ export function Cinematic() {
     </section>
     <dialog ref={filmDialog} className="film-dialog" aria-label="Cementing a Nation film" onClose={() => { player.current?.pause(); document.body.style.overflow = ""; watchButton.current?.focus({ preventScroll: true }); }}>
       <button className="close-button" onClick={closeFilm} aria-label="Close film"><span>CLOSE FILM</span><span className="close-mark" /></button>
-      <video ref={player} poster="/images/film-poster.webp" controls muted playsInline preload="none" aria-label="Cementing a Nation, supplied cinematic film" />
+      <video ref={player} poster={assetPath("/images/film-poster.webp")} controls muted playsInline preload="none" aria-label="Cementing a Nation, supplied cinematic film" />
       <p>A Dalmia Bharat story · Scroll to explore the full experience.</p>
     </dialog>
   </>;
 }
-
-
-
