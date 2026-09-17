@@ -59,7 +59,9 @@ The verifier checks master hashes when present, exactly one published 720p MP4, 
 - Fullscreen opening pinned for 350vh, with synchronized HTML chapters, chapter buttons, loading state, skip intro and cinematic finale.
 - Transparent dark fixed navigation, native-dialog responsive menu and smooth section links.
 - The decoded final video frame remains fixed behind all three following sections and the footer. A continuous scrim keeps type readable without opaque section backgrounds.
-- Mont-Fort-inspired spatial motion: slow background camera drift, perspective heading reveals, independently moving image planes, restrained pointer tilt and a wireframe architectural volume. Desktop motion is reduced on touch devices and disabled for reduced-motion visitors.
+- Mont-Fort-inspired spatial motion: slow background camera drift, perspective heading reveals, independently moving image planes, restrained pointer tilt and layered atmospheric depth. Desktop motion is reduced on touch devices and disabled for reduced-motion visitors.
+- A lightweight procedural atmosphere adds mineral haze, warm light and dust particles projected at different depths, with soft foreground focus. Text areas remain clearer for readability. No additional videos, downloaded textures or graphics libraries are required.
+- Atmospheric animation is capped at 30 fps on desktop and 24 fps with a lower particle/pixel budget on mobile. It pauses in hidden tabs and open menus/film dialogs, and is disabled for reduced motion.
 - A separate static finale poster preserves the continuous background when video scrubbing is unavailable. Foreground film detail is a still from the supplied 720p master.
 - Exactly three homepage sections: About, Our World, Closing.
 - Local fonts and imagery, keyboard navigation and focus management, reduced-motion support, video error recovery and mobile native playback.

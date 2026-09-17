@@ -49,8 +49,6 @@ export function Reveals({ children }: { children: React.ReactNode }) {
           const distance = Number(element.dataset.parallax);
           gsap.fromTo(element, { y: -distance / 2 }, { y: distance / 2, ease: "none", scrollTrigger: { trigger: element.parentElement, start: "top bottom", end: "bottom top", scrub: 1.2 } });
         });
-        const volume = root.current?.querySelector(".volume-cube");
-        if (volume) gsap.fromTo(volume, { rotationY: -32, rotationX: -20 }, { rotationY: 15, rotationX: -32, ease: "none", scrollTrigger: { trigger: ".about-section", start: "top bottom", end: "bottom top", scrub: 1.5 } });
 
         gsap.utils.toArray<HTMLElement>("[data-tilt]").forEach(element => {
           const restingAngle = Number(element.dataset.tilt);
