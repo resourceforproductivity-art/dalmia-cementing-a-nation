@@ -18,6 +18,7 @@ const chapters = [
 export function Cinematic() {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
   const selectedSource = useRef<string | null>(null);
   const trigger = useRef<ScrollTrigger | null>(null);
   const filmDialog = useRef<HTMLDialogElement>(null);
@@ -27,7 +28,8 @@ export function Cinematic() {
   useEffect(() => {
     const section = root.current;
     const film = video.current;
-    if (!section || !film) return;
+    const backdrop = stage.current;
+    if (!section || !film || !backdrop) return;
     // Choose once per visit. No server-rendered src means the browser cannot
     // speculatively download desktop video before checking the device.
     // Keep the selection on resize/orientation changes to avoid a second asset.
@@ -65,8 +67,8 @@ export function Cinematic() {
         timeline?.scrollTrigger?.kill();
         timeline?.kill();
         trigger.current = null;
-        section.dataset.mode = "fallback";
-        section.dataset.ready = "true";
+        section.dataset.mode = backdrop.dataset.mode = "fallback";
+        section.dataset.ready = backdrop.dataset.ready = "true";
         gsap.set(panels, { autoAlpha: 0 });
         panels.forEach(panel => panel.setAttribute("aria-hidden", "true"));
         gsap.set(finale, { autoAlpha: 1, y: 0 });
@@ -94,7 +96,7 @@ export function Cinematic() {
         if (disposed || fallback || !Number.isFinite(film.duration) || film.duration <= 0) return;
         duration = film.duration;
         ready = true;
-        section.dataset.ready = "true";
+        section.dataset.ready = backdrop.dataset.ready = "true";
         section.dataset.duration = duration.toFixed(3);
         loading.setAttribute("aria-hidden", "true");
         clearTimeout(loadingTimeout);
@@ -110,7 +112,7 @@ export function Cinematic() {
         if (previousChapter !== chapter) {
           previousChapter = chapter;
           chapterButtons.forEach((button, index) => button.setAttribute("aria-current", String(index === chapter)));
-          section.dataset.chapter = String(chapter + 1);
+          section.dataset.chapter = backdrop.dataset.chapter = String(chapter + 1);
         }
         const showFinale = p >= 0.82;
         if (previousFinale !== showFinale) {
@@ -122,8 +124,8 @@ export function Cinematic() {
         queueSeek();
       };
 
-      section.dataset.ready = "false";
-      section.dataset.mode = "scrub";
+      section.dataset.ready = backdrop.dataset.ready = "false";
+      section.dataset.mode = backdrop.dataset.mode = "scrub";
       finale.inert = true;
       if (reduced || film.error || !film.canPlayType("video/mp4")) {
         activateFallback();
@@ -155,7 +157,9 @@ export function Cinematic() {
           .fromTo(panels[2], { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.55)
           .to(panels[2], { autoAlpha: 0, y: -24, duration: 0.055 }, 0.75)
           .to(finale, { autoAlpha: 1, y: 0, duration: 0.065 }, 0.81)
-          .to(".film-shade", { opacity: 0.8, duration: 0.1 }, 0.79);
+          .to(backdrop.querySelector(".film-shade"), { opacity: 0.46, duration: 0.1 }, 0.79)
+          .to(section.querySelectorAll(".chapter-rail, .film-heading"), { autoAlpha: 0, duration: 0.06 }, 0.81)
+          .to(section.querySelectorAll(".film-bottom, .film-progress, .watch-film"), { autoAlpha: 0, duration: 0.035 }, 0.96);
         render();
         if (!film.getAttribute("src")) {
           film.src = selectedSource.current!;
@@ -205,11 +209,20 @@ export function Cinematic() {
   const closeFilm = () => { filmDialog.current?.close(); };
 
   return <>
-    <section ref={root} id="cinematic" className="cinematic" data-mode="scrub" data-ready="false" data-chapter="1" aria-label="Cementing a Nation, a cinematic Dalmia Bharat story">
-      <Image className="film-poster" src={assetPath("/images/film-poster.webp")} alt="A sculptural figure beside a monumental stone" fill unoptimized preload sizes="100vw" />
-      <Image className="fallback-poster" src={assetPath("/images/film-finale.jpg")} alt="A cinematic industrial landscape" fill sizes="100vw" />
-      <video ref={video} className="cinematic-video" poster={assetPath("/images/film-poster.webp")} preload="none" muted playsInline disablePictureInPicture aria-hidden="true" tabIndex={-1} />
+    {/* This stage is outside the pinned section: the decoded final frame stays
+        behind every following section without loading another video. */}
+    <div ref={stage} className="cinematic-stage" data-mode="scrub" data-ready="false" data-chapter="1" aria-hidden="true">
+      <div className="stage-camera">
+        <div className="stage-media">
+          <Image className="film-poster" src={assetPath("/images/film-poster.webp")} alt="" fill unoptimized preload sizes="100vw" />
+          <Image className="fallback-poster" src={assetPath("/images/film-finale.jpg")} alt="" fill sizes="100vw" />
+          <video ref={video} className="cinematic-video" poster={assetPath("/images/film-poster.webp")} preload="none" muted playsInline disablePictureInPicture tabIndex={-1} />
+        </div>
+      </div>
       <div className="film-shade" /><div className="film-vignette" />
+      <div className="continuation-shade" />
+    </div>
+    <section ref={root} id="cinematic" className="cinematic" data-mode="scrub" data-ready="false" data-chapter="1" aria-label="Cementing a Nation, a cinematic Dalmia Bharat story">
       <div className="film-heading eyebrow"><span className="red-rule" /> CEMENTING A NATION <span className="film-heading-divider" /> A DALMIA BHARAT STORY</div>
       <p className="sr-only">Cementing a Nation. 1904: A Vision Takes Form. Mid-1930s: One Stone Changed Everything. 1939: Industry Rose. Communities Grew.</p>
       <div className="chapters">

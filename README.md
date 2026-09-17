@@ -58,7 +58,10 @@ The verifier checks master hashes when present, exactly two published MP4s, H.26
 
 - Next.js App Router, TypeScript, Tailwind CSS 4 and GSAP ScrollTrigger.
 - Fullscreen opening pinned for 350vh, with synchronized HTML chapters, chapter buttons, loading state, skip intro and cinematic finale.
-- Transparent/light fixed navigation, native-dialog responsive menu and smooth section links.
+- Transparent dark fixed navigation, native-dialog responsive menu and smooth section links.
+- The decoded final video frame remains fixed behind all three following sections and the footer. A continuous scrim keeps type readable without opaque section backgrounds.
+- Mont-Fort-inspired spatial motion: slow background camera drift, perspective heading reveals, independently moving image planes, restrained pointer tilt and a wireframe architectural volume. Desktop motion is reduced on touch devices and disabled for reduced-motion visitors.
+- A separate static finale poster preserves the continuous background when video scrubbing is unavailable. Foreground film detail is a still from the supplied 720p master.
 - Exactly three homepage sections: About, Our World, Closing.
 - Local fonts and imagery, keyboard navigation and focus management, reduced-motion support, video error recovery and mobile native playback.
 - No CMS, database, API, business-detail pages, forms or invented company statistics.
@@ -77,7 +80,7 @@ The Playwright suite uses installed Google Chrome (`channel: chrome`) and starts
 
 ## Publishing
 
-The project is ready for Vercel's Next.js preset. `.vercelignore` excludes local masters and test artifacts. Only optimized media in `public/` is served. Video responses use a one-day cache with stale-while-revalidate. The site retains an independent-demo disclaimer and `noindex` metadata.
+The demo is published on GitHub Pages. Pushes to `main` run the lint/build workflow and deploy the static export. Only optimized media in `public/` is served; the original masters remain local. The site retains an independent-demo disclaimer and `noindex` metadata.
 
 ## Asset credits
 
@@ -95,7 +98,7 @@ Brand imagery belongs to its respective owners and is used for this independent 
 
 Physical iOS/Safari and Android devices were not available; Chrome and mobile/tablet viewport emulation were tested. Device decoding and network conditions can affect scrubbing; a static finale and native film player are provided as fallbacks. Editorial panels are presentation elements rather than extra pages.
 
-## GitHub Pages alternative
+## GitHub Pages deployment
 
 A verified static export is prepared for `/dalmia-cementing-a-nation/`:
 

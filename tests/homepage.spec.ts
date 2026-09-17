@@ -32,20 +32,20 @@ test("film advances, reverses, stays pinned, and holds its final frame", async (
   await page.screenshot({ path: "artifacts/finale.jpg", type: "jpeg", quality: 85 });
   await page.getByRole("link", { name: "EXPLORE DALMIA", exact: true }).click();
   await expect.poll(() => page.locator("#about").evaluate(e => Math.abs(e.getBoundingClientRect().top - 98))).toBeLessThan(4);
-  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator(".about-heading")).toHaveCSS("opacity", "1");
   await page.screenshot({ path: "artifacts/about.jpg", type: "jpeg", quality: 85 });
   expect(errors).toEqual([]);
 });
 
-test("chapter buttons, skip intro, header themes and all section links work", async ({ page }) => {
+test("chapter buttons, skip intro, cinematic header and all section links work", async ({ page }) => {
   await filmReady(page);
   await page.getByRole("button", { name: /Chapter 03:/ }).click();
   await expect.poll(() => page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(8.5);
   await page.getByRole("button", { name: /Chapter 01:/ }).click();
   await expect.poll(() => page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime)).toBeLessThan(1.4);
   await page.getByRole("link", { name: "SKIP INTRO", exact: true }).click();
-  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("navigation", { name: "Main navigation", exact: true }).getByRole("link", { name: "Businesses" }).click();
   await expect.poll(() => page.locator("#our-world").evaluate(e => Math.abs(e.getBoundingClientRect().top - 98))).toBeLessThan(4);
   await page.screenshot({ path: "artifacts/our-world.jpg", type: "jpeg", quality: 85 });
@@ -114,7 +114,7 @@ test("reduced motion removes pinning and presents a usable static finale", async
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "CEMENTING A NATION" })).toBeVisible();
   await page.getByRole("link", { name: "EXPLORE DALMIA", exact: true }).click();
-  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "dark");
   expect(await page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime)).toBe(0);
 });
 
@@ -125,8 +125,36 @@ test("video failure gracefully removes the pin and keeps content accessible", as
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "EXPLORE DALMIA", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "EXPLORE DALMIA", exact: true }).click();
-  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "dark");
 });
 
 
 
+
+for (const width of [1440, 390]) {
+  test(`final video frame continues behind all content at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await filmReady(page);
+    await filmProgress(page, .98);
+    const finalTime = await page.locator('.cinematic-video').evaluate((v: HTMLVideoElement) => v.currentTime);
+    for (const id of ['about', 'our-world', 'closing']) {
+      await page.evaluate(id => document.getElementById(id)?.scrollIntoView({ behavior: 'instant' }), id);
+      await expect(page.locator('.cinematic-stage')).toHaveCSS('position', 'fixed');
+      const stage = await page.locator('.cinematic-stage').boundingBox();
+      expect(stage?.y).toBe(0);
+      expect(stage?.height).toBe(900);
+      expect(await page.locator('.cinematic-video').evaluate((v: HTMLVideoElement) => v.currentTime)).toBeCloseTo(finalTime, 1);
+      await expect(page.locator(`#${id}`)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(page.locator(`#${id} h2`)).toBeVisible();
+      await expect.poll(() => page.locator(`#${id} h2`).evaluate(e => Number(getComputedStyle(e.closest("[data-reveal]")!).opacity))).toBe(1);
+      await page.screenshot({ path: `artifacts/continuous-${id}-${width}.jpg`, type: 'jpeg', quality: 85 });
+    }
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }));
+    await expect(page.locator('.site-footer')).toBeVisible();
+    expect(await page.locator('.cinematic-video').evaluate((v: HTMLVideoElement) => v.currentTime)).toBeCloseTo(finalTime, 1);
+    await page.screenshot({ path: `artifacts/continuous-footer-${width}.jpg`, type: 'jpeg', quality: 85 });
+    // Returning from the footer restores the opening's reversible timeline.
+    await filmProgress(page, .15);
+    await expect(page.locator('.chapter-button').first()).toHaveAttribute('aria-current', 'true');
+  });
+}

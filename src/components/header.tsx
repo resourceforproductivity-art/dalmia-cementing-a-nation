@@ -12,27 +12,9 @@ const links = [
 ];
 
 export function Header() {
-  const header = useRef<HTMLElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const about = document.getElementById("about");
-      const closing = document.getElementById("closing");
-      const threshold = (header.current?.offsetHeight ?? 111) + 8;
-      const light = about && closing && about.getBoundingClientRect().top <= threshold && closing.getBoundingClientRect().top > threshold;
-      if (header.current) header.current.dataset.theme = light ? "light" : "dark";
-    };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    update();
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -53,7 +35,7 @@ export function Header() {
 
   return <>
     <a className="skip-link" href="#about">Skip to main content</a>
-    <header ref={header} className="site-header" data-theme="dark">
+    <header className="site-header" data-theme="dark">
       <a className="brand" href="#cinematic" aria-label="Dalmia Bharat, back to the beginning"><Image src={assetPath("/images/dalmia-logo.png")} alt="Dalmia Bharat" width={200} height={117} preload /></a>
       <nav className="desktop-nav" aria-label="Main navigation">{links.map(link => <a key={link.target} href={`#${link.target}`}>{link.label}</a>)}</nav>
       <button ref={toggle} className="menu-toggle" aria-label="Open menu" aria-expanded={open} aria-controls="main-menu" onClick={() => { dialog.current?.showModal(); setOpen(true); }}><span className="menu-label">MENU</span><span className="menu-lines"><i /><i /></span></button>
