@@ -105,4 +105,7 @@ npm run build:pages
 
 The result is in `out/`. Local assets, fonts, video selection and navigation support the repository subpath. Desktop and mobile export checks passed with forward/reverse seeks and exactly one video URL per device. `.github/workflows/pages.yml` builds and publishes on pushes to main after Pages is enabled with GitHub Actions as its source.
 
-GitHub returned that the current account plan does not support Pages for this private repository. Publishing with this plan requires approval to make the repository public. The prepared Pages changes have not yet been published, and repository visibility is unchanged. The original masters remain local and excluded from Git and deployment.
+GitHub Pages is enabled on the public repository with user approval. The GitHub Actions workflow publishes the tested static export on each push to main. The original masters remain local and excluded from Git and deployment.
+
+Website: https://resourceforproductivity-art.github.io/dalmia-cementing-a-nation/
+Repository: https://github.com/resourceforproductivity-art/dalmia-cementing-a-nation
