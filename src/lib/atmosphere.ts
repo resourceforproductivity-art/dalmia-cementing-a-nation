@@ -1,125 +1,180 @@
-/** Small projected particle scene. Cloud textures are generated once, not per frame. */
+/** Procedural cloud banks with depth parallax and a diffusing cursor displacement field. */
 const clamp = (n: number, low = 0, high = 1) => Math.min(high, Math.max(low, n));
 const smooth = (n: number) => { const t = clamp(n); return t * t * (3 - 2 * t); };
-const wrap = (n: number, span: number) => ((n % span) + span) % span;
-const randomGenerator = (seed: number) => () => {
-  seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
-  return (seed >>> 0) / 4294967296;
-};
 
-function cloudTexture(seed: number, warm: boolean) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  const random = randomGenerator(seed);
-  const grid = Float32Array.from({ length: 64 * 64 }, random);
-  const noise = (x: number, y: number) => {
-    const ix = Math.floor(x), iy = Math.floor(y);
-    const tx = smooth(x - ix), ty = smooth(y - iy);
-    const at = (a: number, b: number) => grid[(a & 63) + (b & 63) * 64];
-    return (at(ix, iy) * (1 - tx) + at(ix + 1, iy) * tx) * (1 - ty)
-      + (at(ix, iy + 1) * (1 - tx) + at(ix + 1, iy + 1) * tx) * ty;
+const vertexSource = `
+attribute vec2 position;
+varying vec2 uv;
+void main() {
+  uv = position * .5 + .5;
+  gl_Position = vec4(position, 0., 1.);
+}`;
+
+// Original cloud shader: large drifting billows, internal detail and soft density edges.
+// The cursor distorts the density field itself; there are no point sprites or light shafts.
+const fragmentSource = `
+precision mediump float;
+varying vec2 uv;
+uniform sampler2D noiseMap;
+uniform sampler2D flowMap;
+uniform vec2 camera;
+uniform float aspect, time, layer, strength, travel;
+
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3. - 2. * f);
+  return texture2D(noiseMap, (i + f + .5) / 128.).r;
+}
+float billows(vec2 p) {
+  float n = noise(p) * .52;
+  p = mat2(1.64, 1.12, -1.12, 1.64) * p + 7.3;
+  n += noise(p) * .27;
+  p = mat2(1.72, -1.08, 1.08, 1.72) * p + 3.7;
+  n += noise(p) * .14;
+  return n + noise(p * 2.03) * .07;
+}
+void main() {
+  // Near banks move further than the distant veil as the virtual camera turns.
+  float depth = mix(.018, .058, layer * .5);
+  vec2 view = uv + camera * vec2(depth, depth * .7);
+  view = (view - .5) / (1. + travel * (.018 + layer * .022)) + .5;
+  vec2 p = vec2(view.x * aspect, view.y);
+  p.y += travel * (.015 + layer * .009);
+  p += vec2(time * (.004 + layer * .002), time * .0015);
+  p += vec2(layer * 9.7, layer * 3.1);
+
+  vec2 curl = vec2(noise(p * 2.1 + time * .003), noise(p * 2.4 + 11.3)) - .5;
+  // Sample a diffusing cursor field, warped to avoid a circular brush mark.
+  float wake = texture2D(flowMap, uv + curl * .045).r;
+  p += curl * .19;
+  p += vec2(.115, -.065) * wake * (1. + layer * .28);
+  p = (p - .5) * (1. + wake * .025) + .5;
+
+  float broad = billows(p * (2.1 + layer * .35));
+  float detail = billows(p * 6.4 + broad * .8);
+  float density = broad * .77 + detail * .23;
+  float side = pow(abs(view.x - .5) * 2., 1.7);
+  float lower = 1. - smoothstep(.05, .65, view.y);
+  float upper = smoothstep(.77, 1.2, view.y);
+  float bank = clamp(side * .64 + lower * .67 + upper * .24, 0., 1.);
+  // Most of the volume lives around the frame, leaving the film and type readable.
+  float threshold = .63 - bank * .24;
+  float alpha = smoothstep(threshold - .075, threshold + .17, density);
+  alpha *= mix(.2, .7, bank);
+  if (layer > 1.5) {
+    alpha *= smoothstep(.3, .94, side + lower * .65) * .48;
+  }
+  // Density shading belongs to the cloud material, with no added lighting overlay.
+  float shade = clamp((density - .32) * 1.7, 0., 1.);
+  vec3 color = mix(vec3(.36, .41, .43), vec3(.82, .85, .85), shade);
+  color += (detail - .5) * .055;
+  alpha *= strength;
+  gl_FragColor = vec4(color * alpha, alpha);
+}`;
+
+function createCloudRenderer(canvas: HTMLCanvasElement) {
+  const gl = canvas.getContext("webgl", {
+    alpha: true, antialias: false, depth: false, stencil: false,
+    premultipliedAlpha: true, powerPreference: "low-power",
+  });
+  if (!gl) return null;
+  const shaders: WebGLShader[] = [];
+  const compile = (type: number, source: string) => {
+    const shader = gl.createShader(type);
+    if (!shader) return null;
+    shaders.push(shader);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null;
   };
-  const pixels = ctx.createImageData(canvas.width, canvas.height);
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
-      const u = x / canvas.width, v = y / canvas.height;
-      const warp = noise(u * 5 + 8, v * 4 + 7);
-      const n = noise(u * 4 + warp * 1.7, v * 3 + warp) * .54
-        + noise(u * 10 + 4, v * 7 + 12) * .27
-        + noise(u * 23, v * 15) * .13 + noise(u * 47, v * 31) * .06;
-      const envelope = Math.pow(clamp(1 - (u * 2 - 1) ** 2 - (v * 2 - 1) ** 2), 1.8);
-      const density = smooth((n - .23) / .53) * envelope;
-      const offset = (y * canvas.width + x) * 4;
-      const light = n * 45;
-      pixels.data[offset] = (warm ? 191 : 151) + light;
-      pixels.data[offset + 1] = (warm ? 181 : 172) + light;
-      pixels.data[offset + 2] = (warm ? 157 : 177) + light;
-      pixels.data[offset + 3] = Math.round(density * 255);
-    }
+  const vertex = compile(gl.VERTEX_SHADER, vertexSource);
+  const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
+  const program = gl.createProgram();
+  const buffer = gl.createBuffer();
+  const noiseTexture = gl.createTexture();
+  const flowTexture = gl.createTexture();
+  const dispose = () => {
+    shaders.forEach(shader => gl.deleteShader(shader));
+    gl.deleteProgram(program); gl.deleteBuffer(buffer);
+    gl.deleteTexture(noiseTexture); gl.deleteTexture(flowTexture);
+  };
+  if (!vertex || !fragment || !program || !buffer || !noiseTexture || !flowTexture) {
+    dispose(); return null;
   }
-  ctx.putImageData(pixels, 0, 0);
-  return canvas;
-}
+  gl.attachShader(program, vertex); gl.attachShader(program, fragment);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { dispose(); return null; }
+  gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const position = gl.getAttribLocation(program, "position");
+  gl.enableVertexAttribArray(position);
+  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+  const uniform = (name: string) => gl.getUniformLocation(program, name);
+  const locations = Object.fromEntries(["camera", "aspect", "time", "layer", "strength", "travel"].map(name => [name, uniform(name)]));
+  let seed = 1939;
+  const noise = Uint8Array.from({ length: 128 * 128 }, () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
+    return (seed >>> 24) & 255;
+  });
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 128, 128, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, noise);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.uniform1i(uniform("noiseMap"), 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, flowTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 96, 64, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(uniform("flowMap"), 1);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.clearColor(0, 0, 0, 0);
 
-function moteTexture(sharp = false) {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 48;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  const glow = ctx.createRadialGradient(22, 21, 0, 24, 24, 24);
-  glow.addColorStop(0, "rgba(255,239,204,.95)");
-  glow.addColorStop(.24, "rgba(239,219,180,.82)");
-  glow.addColorStop(.55, "rgba(208,193,159,.3)");
-  glow.addColorStop(1, "rgba(208,193,159,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 48, 48);
-  if (sharp) {
-    // An irregular, shaded mineral grain, with a brighter face toward the light.
-    const mineral = ctx.createLinearGradient(15, 12, 32, 36);
-    mineral.addColorStop(0, "rgba(255,245,218,.98)");
-    mineral.addColorStop(.4, "rgba(227,210,175,.9)");
-    mineral.addColorStop(1, "rgba(134,132,119,.5)");
-    ctx.fillStyle = mineral;
-    ctx.beginPath();
-    ctx.moveTo(18, 12); ctx.lineTo(29, 14); ctx.lineTo(35, 23);
-    ctx.lineTo(29, 34); ctx.lineTo(18, 32); ctx.lineTo(13, 22);
-    ctx.closePath(); ctx.fill();
-  }
-  return canvas;
+  return {
+    upload: (flow: Uint8Array) => gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 96, 64, gl.LUMINANCE, gl.UNSIGNED_BYTE, flow),
+    draw: (target: CanvasRenderingContext2D, width: number, height: number, x: number, y: number, time: number, travel: number, strength: number, near: boolean, mobile: boolean) => {
+      if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      gl.viewport(0, 0, width, height);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform2f(locations.camera, x, y);
+      gl.uniform1f(locations.aspect, width / height);
+      gl.uniform1f(locations.time, time);
+      gl.uniform1f(locations.travel, travel);
+      gl.uniform1f(locations.strength, strength);
+      const layers = near ? [2] : mobile ? [0] : [0, 1];
+      for (const layer of layers) { gl.uniform1f(locations.layer, layer); gl.drawArrays(gl.TRIANGLES, 0, 3); }
+      // Two presentation canvases put clouds on both sides of the editorial content.
+      // Copy immediately, before WebGL discards its drawing buffer.
+      target.clearRect(0, 0, width, height);
+      target.drawImage(canvas, 0, 0);
+    },
+    dispose,
+  };
 }
-
-function beamTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 192; canvas.height = 384;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  const image = ctx.createImageData(canvas.width, canvas.height);
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
-      const u = x / canvas.width * 2 - 1, v = y / canvas.height;
-      const core = Math.pow(clamp(1 - Math.abs(u) / (.035 + v * .9)), 2.2);
-      const fade = smooth(v / .045) * Math.pow(1 - v, .5);
-      const i = (y * canvas.width + x) * 4;
-      image.data[i] = 249; image.data[i + 1] = 226; image.data[i + 2] = 184;
-      image.data[i + 3] = Math.round(core * fade * 200);
-    }
-  }
-  ctx.putImageData(image, 0, 0);
-  return canvas;
-}
-
-const clouds = [
-  { x: -.85, y: .02, z: 1100, width: 1.85, height: .76, opacity: .57, speed: .17, warm: false, near: false },
-  { x: .94, y: -.02, z: 820, width: 1.58, height: .72, opacity: .51, speed: -.13, warm: true, near: false },
-  { x: -.6, y: .82, z: 560, width: 2.25, height: .8, opacity: .67, speed: .14, warm: true, near: false },
-  { x: .8, y: .63, z: 720, width: 1.75, height: .67, opacity: .56, speed: -.18, warm: false, near: false },
-  { x: -1.12, y: .97, z: 140, width: 1.7, height: .82, opacity: .28, speed: .1, warm: true, near: true },
-  { x: 1.12, y: .85, z: 220, width: 1.7, height: .76, opacity: .23, speed: -.11, warm: false, near: true },
-];
 
 export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasElement): () => void {
   const distant = back.getContext("2d", { alpha: true });
   const close = front.getContext("2d", { alpha: true });
   if (!distant || !close) return () => {};
-  const warmCloud = cloudTexture(739, true);
-  const coolCloud = cloudTexture(162, false);
-  const mote = moteTexture();
-  const grain = moteTexture(true);
-  const beam = beamTexture();
-  const random = randomGenerator(1939);
-  const particles = Array.from({ length: 176 }, (_, index) => ({
-    x: (random() - .5) * 2.6, y: (random() - .5) * 2.2, z: random() * 1500,
-    radius: 1.05 + random() * 1.7, alpha: .38 + random() * .38,
-    offsetX: 0, offsetY: 0,
-    phase: random() * Math.PI * 2, speed: .5 + random() * .9, near: index % 7 === 0,
-  }));
-  let width = 1, height = 1, backRatio = 1, frontRatio = 1, mobile = false;
-  let resizePending = true, frame = 0, lastFrame = 0, elapsed = 0, disposed = false;
+  const surface = document.createElement("canvas");
+  const renderer = createCloudRenderer(surface);
+  // The underlying film remains the complete visual fallback if WebGL is unavailable.
+  if (!renderer) return () => {};
+  let width = 1, height = 1, mobile = false, resizePending = true;
+  let frame = 0, lastFrame = 0, elapsed = 0, disposed = false, contextLost = false;
   let targetScroll = window.scrollY, scroll = targetScroll;
-  const pointer = { x: 0, y: 0, targetX: 0, targetY: 0, windX: 0, windY: 0, active: false };
+  const pointer = { x: .5, y: .5, targetX: .5, targetY: .5, active: false };
+  const camera = { x: 0, y: 0 };
+  let flow = new Float32Array(96 * 64), nextFlow = new Float32Array(96 * 64);
+  const flowPixels = new Uint8Array(96 * 64);
   const dialogs = Array.from(document.querySelectorAll("dialog"));
   const readingAreas = Array.from(document.querySelectorAll(".cinematic-finale h1, .chapter, .about-heading h2, .about-copy, .world-heading, .world-panel > p, .closing-main, .site-footer"));
   let readingRects: DOMRect[] = [], lastReadingScroll = -1;
@@ -127,154 +182,94 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
   const onScroll = () => { targetScroll = window.scrollY; };
   const onPointer = (event: PointerEvent) => {
     if (mobile || event.pointerType !== "mouse") return;
-    const nextX = event.clientX / width - .5;
-    const nextY = event.clientY / height - .5;
-    if (pointer.active) {
-      pointer.windX = clamp(pointer.windX + (nextX - pointer.targetX) * 90, -28, 28);
-      pointer.windY = clamp(pointer.windY + (nextY - pointer.targetY) * 65, -20, 20);
-    }
     pointer.active = true;
-    pointer.targetX = nextX;
-    pointer.targetY = nextY;
+    pointer.targetX = clamp(event.clientX / width);
+    pointer.targetY = 1 - clamp(event.clientY / height);
   };
-  const resetPointer = () => { pointer.targetX = pointer.targetY = 0; pointer.active = false; };
+  const resetPointer = () => { pointer.targetX = pointer.targetY = .5; pointer.active = false; };
   const size = () => {
     width = document.documentElement.clientWidth;
     height = window.innerHeight;
     mobile = width < 768 || window.matchMedia("(pointer: coarse)").matches;
-    // Haze is intentionally soft. Limit its pixel budget independently of crisp dust.
-    backRatio = Math.min(mobile ? .6 : .85, 1300 / width);
-    frontRatio = Math.min(window.devicePixelRatio || 1, mobile ? 1 : 1.25, 1800 / width);
-    for (const [canvas, ratio] of [[back, backRatio], [front, frontRatio]] as const) {
+    const ratio = Math.min(mobile ? .6 : .75, 1152 / width);
+    for (const canvas of [back, front]) {
       canvas.width = Math.max(1, Math.round(width * ratio));
       canvas.height = Math.max(1, Math.round(height * ratio));
       canvas.dataset.quality = mobile ? "light" : "full";
     }
+    if (mobile) { resetPointer(); flow.fill(0); nextFlow.fill(0); }
     lastReadingScroll = -1;
     resizePending = false;
   };
+  const updateFlow = (dt: number) => {
+    const response = 1 - Math.exp(-dt * 3);
+    pointer.x += (pointer.targetX - pointer.x) * response;
+    pointer.y += (pointer.targetY - pointer.y) * response;
+    // Camera drift settles much more slowly than the cursor deformation.
+    const cameraResponse = 1 - Math.exp(-dt * .5);
+    camera.x += ((pointer.targetX - .5) * 2 - camera.x) * cameraResponse;
+    camera.y += ((pointer.targetY - .5) * 2 - camera.y) * cameraResponse;
+    const decay = Math.exp(-dt * .72), diffusion = Math.min(dt * 6, .3);
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 96; x++) {
+        const i = y * 96 + x;
+        const neighbours = (flow[y * 96 + Math.max(0, x - 1)] + flow[y * 96 + Math.min(95, x + 1)]
+          + flow[Math.max(0, y - 1) * 96 + x] + flow[Math.min(63, y + 1) * 96 + x]) * .25;
+        const distance = Math.hypot(x / 95 - pointer.x, y / 63 - pointer.y);
+        const brush = pointer.active ? smooth(1 - distance / .12) : 0;
+        nextFlow[i] = Math.min(1, (flow[i] + (neighbours - flow[i]) * diffusion) * decay + brush * dt * 2.7);
+        flowPixels[i] = Math.round(nextFlow[i] * 255);
+      }
+    }
+    [flow, nextFlow] = [nextFlow, flow];
+    renderer.upload(flowPixels);
+  };
+  const featherType = (context: CanvasRenderingContext2D, opacity: number) => {
+    context.save();
+    context.scale(back.width / width, back.height / height);
+    context.globalCompositeOperation = "destination-out";
+    for (const rect of readingRects) {
+      context.save();
+      context.translate(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      context.scale(Math.max(1, rect.width * .72), Math.max(1, rect.height * .75 + 40));
+      const clearAir = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+      clearAir.addColorStop(0, `rgba(0,0,0,${opacity})`);
+      clearAir.addColorStop(.55, `rgba(0,0,0,${opacity * .65})`);
+      clearAir.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = clearAir; context.fillRect(-1, -1, 2, 2);
+      context.restore();
+    }
+    context.restore();
+  };
   const render = (now: number) => {
-    if (disposed) return;
+    if (disposed || contextLost) return;
     frame = requestAnimationFrame(render);
-    const interval = mobile ? 1000 / 24 : 1000 / 30;
+    const interval = 1000 / (mobile ? 24 : 60);
     if (lastFrame && now - lastFrame < interval - 1) return;
-    const dt = lastFrame ? Math.min((now - lastFrame) / 1000, .06) : 1 / 30;
-    lastFrame = now;
-    elapsed += dt;
+    const dt = lastFrame ? Math.min((now - lastFrame) / 1000, .06) : 1 / 60;
+    lastFrame = now; elapsed += dt;
     if (resizePending) size();
     scroll += (targetScroll - scroll) * (1 - Math.exp(-dt * 6));
-    pointer.x += (pointer.targetX - pointer.x) * (1 - Math.exp(-dt * 5.5));
-    pointer.y += (pointer.targetY - pointer.y) * (1 - Math.exp(-dt * 5.5));
-    pointer.windX *= Math.exp(-dt * 2.3);
-    pointer.windY *= Math.exp(-dt * 2.3);
-    distant.setTransform(backRatio, 0, 0, backRatio, 0, 0);
-    close.setTransform(frontRatio, 0, 0, frontRatio, 0, 0);
-    distant.clearRect(0, 0, width, height);
-    close.clearRect(0, 0, width, height);
-    const camera = Math.min(scroll / height * 27, 280);
-    const strength = .68 + smooth((scroll / height - 2.3) / 1.2) * .32;
+    updateFlow(dt);
+    const travel = Math.min(scroll / height * .18, 1.8);
+    const strength = (.55 + smooth((scroll / height - 2.3) / 1.2) * .35) * (mobile ? .75 : 1);
     if (lastReadingScroll < 0 || Math.abs(targetScroll - lastReadingScroll) > 3) {
       readingRects = readingAreas.map(element => element.getBoundingClientRect()).filter(rect => rect.bottom > 0 && rect.top < height);
       lastReadingScroll = targetScroll;
     }
-
-    const lightX = width * (.1 + pointer.x * .1);
-    const lightTarget = width * (.66 + pointer.x * .4);
-    const lightY = -height * .16;
-    const lightDepth = height * 1.5;
-
-    for (const cloud of clouds) {
-      if (mobile && cloud.near) continue;
-      const context = cloud.near ? close : distant;
-      const perspective = (700 + cloud.z) / (700 + cloud.z - camera);
-      const drift = Math.sin(elapsed * .027 + cloud.z) * .12 + elapsed * cloud.speed * .013;
-      const x = width * (.5 + (cloud.x * .5 + Math.sin(drift) * .34) * perspective)
-        - pointer.x * (cloud.near ? 240 : 105) * perspective + pointer.windX * (cloud.near ? 1.4 : .65);
-      const y = height * (.5 + cloud.y * .5 * perspective)
-        + Math.sin(elapsed * .045 + cloud.z) * 14 - pointer.y * (cloud.near ? 135 : 65)
-        - scroll * (cloud.near ? .011 : .003) + pointer.windY * (cloud.near ? 1 : .45);
-      const w = width * cloud.width * perspective;
-      const h = height * cloud.height * perspective;
-      context.globalAlpha = cloud.opacity * strength * (mobile ? .74 : 1);
-      context.drawImage(cloud.warm ? warmCloud : coolCloud, x - w / 2, y - h / 2, w, h);
-    }
-
-    // Broad, feathered light shafts scatter through the thicker dust banks.
-    distant.save();
-    distant.globalCompositeOperation = "screen";
-    for (const [spread, alpha, breadth] of [[-.13, .6, .39], [.04, .87, .25], [.2, .48, .32]]) {
-      const dx = lightTarget + width * spread - lightX;
-      const length = Math.hypot(dx, lightDepth);
-      distant.save();
-      distant.translate(lightX, lightY);
-      distant.rotate(-Math.atan2(dx, lightDepth));
-      distant.globalAlpha = alpha * strength * (mobile ? .58 : 1);
-      distant.drawImage(beam, -width * breadth / 2, 0, width * breadth, length);
-      distant.restore();
-    }
-    distant.restore();
-
-    // Feather the haze around reading areas without cutting rectangular holes.
-    distant.save();
-    distant.globalCompositeOperation = "destination-out";
-    distant.globalAlpha = 1;
-    for (const rect of readingRects) {
-      distant.save();
-      distant.translate(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      distant.scale(Math.max(1, rect.width * .72), Math.max(1, rect.height * .75 + 40));
-      const clearAir = distant.createRadialGradient(0, 0, 0, 0, 0, 1);
-      clearAir.addColorStop(0, "rgba(0,0,0,.72)");
-      clearAir.addColorStop(.55, "rgba(0,0,0,.5)");
-      clearAir.addColorStop(1, "rgba(0,0,0,0)");
-      distant.fillStyle = clearAir;
-      distant.fillRect(-1, -1, 2, 2);
-      distant.restore();
-    }
-    distant.restore();
-
-    const count = mobile ? 48 : particles.length;
-    for (let i = 0; i < count; i++) {
-      const particle = particles[i];
-      // Move through a perspective volume; fade depth boundaries before recycling.
-      const z = wrap(particle.z - camera * (particle.near ? 2.2 : 1) - elapsed * particle.speed * 2.8, 1500);
-      const perspective = 780 / (420 + z);
-      const fade = smooth(z / 160) * smooth((1500 - z) / 170);
-      let x = width * .5 + (particle.x * width * .68 + Math.sin(elapsed * .13 + particle.phase) * 18
-        - pointer.x * (particle.near ? 210 : 95)) * perspective;
-      const worldY = wrap(particle.y * height + height - elapsed * particle.speed * 4 - scroll * .037, height * 2) - height;
-      let y = height * .5 + (worldY - pointer.y * (particle.near ? 120 : 60)) * perspective;
-      const dx = x - (pointer.targetX + .5) * width;
-      const dy = y - (pointer.targetY + .5) * height;
-      const distance = Math.hypot(dx, dy);
-      const influence = pointer.active ? Math.pow(clamp(1 - distance / 250), 2) : 0;
-      const displacement = (particle.near ? 115 : 72) * influence;
-      const inverse = 1 / Math.max(distance, 1);
-      // The cursor parts the dust, and a small tangential force gives it a wake.
-      const pushX = (dx * inverse + dy * inverse * .4) * displacement + pointer.windX * influence * 2;
-      const pushY = (dy * inverse - dx * inverse * .4) * displacement + pointer.windY * influence * 2;
-      const response = 1 - Math.exp(-dt * 4.5);
-      particle.offsetX += (pushX - particle.offsetX) * response;
-      particle.offsetY += (pushY - particle.offsetY) * response;
-      x += particle.offsetX; y += particle.offsetY;
-      if (x < -20 || x > width + 20 || y < -20 || y > height + 20) continue;
-      const context = particle.near ? close : distant;
-      const edge = .4 + .6 * smooth(Math.abs(x / width - .5) * 2);
-      const beamCenter = lightX + (lightTarget - lightX) * (y - lightY) / lightDepth;
-      const illumination = Math.exp(-(((x - beamCenter) / (width * .2)) ** 2));
-      context.globalAlpha = clamp(particle.alpha * fade * strength * (.48 + illumination * .85)
-        * (particle.near ? edge : 1), 0, .92);
-      const radius = particle.radius * perspective * (particle.near ? 5.1 : 2.7) * (mobile ? .8 : 1);
-      context.drawImage(particle.near ? mote : grain, x - radius, y - radius, radius * 2, radius * 2);
-    }
-    distant.globalAlpha = close.globalAlpha = 1;
+    renderer.draw(distant, back.width, back.height, camera.x, camera.y, elapsed, travel, strength, false, mobile);
+    renderer.draw(close, front.width, front.height, camera.x, camera.y, elapsed, travel, strength, true, mobile);
+    featherType(distant, .78);
+    featherType(close, .94);
   };
   const visibility = () => {
-    cancelAnimationFrame(frame);
-    lastFrame = 0;
+    cancelAnimationFrame(frame); lastFrame = 0;
     const paused = document.hidden || dialogs.some(dialog => dialog.open);
-    back.dataset.state = front.dataset.state = paused ? "paused" : "running";
-    if (!paused && !disposed) frame = requestAnimationFrame(render);
+    back.dataset.state = front.dataset.state = contextLost ? "off" : paused ? "paused" : "running";
+    if (!paused && !disposed && !contextLost) frame = requestAnimationFrame(render);
   };
+  const lost = () => { contextLost = true; visibility(); };
+  surface.addEventListener("webglcontextlost", lost);
   const observer = new MutationObserver(visibility);
   dialogs.forEach(dialog => observer.observe(dialog, { attributes: true, attributeFilter: ["open"] }));
   window.addEventListener("resize", resize, { passive: true });
@@ -284,16 +279,15 @@ export function createAtmosphere(back: HTMLCanvasElement, front: HTMLCanvasEleme
   document.addEventListener("visibilitychange", visibility);
   visibility();
   return () => {
-    disposed = true;
-    cancelAnimationFrame(frame);
-    observer.disconnect();
+    disposed = true; cancelAnimationFrame(frame); observer.disconnect();
     window.removeEventListener("resize", resize);
     window.removeEventListener("scroll", onScroll);
     window.removeEventListener("pointermove", onPointer);
     document.documentElement.removeEventListener("pointerleave", resetPointer);
     document.removeEventListener("visibilitychange", visibility);
-    back.width = back.height = front.width = front.height = 1;
-    for (const texture of [warmCloud, coolCloud, mote, grain, beam]) texture.width = texture.height = 1;
+    surface.removeEventListener("webglcontextlost", lost);
+    renderer.dispose();
+    back.width = back.height = front.width = front.height = surface.width = surface.height = 1;
     back.dataset.state = front.dataset.state = "off";
   };
 }
