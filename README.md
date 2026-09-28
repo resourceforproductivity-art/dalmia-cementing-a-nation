@@ -20,38 +20,36 @@ npm run start -- --port 3020
 
 ## Video delivery
 
-One 720p MP4 is published for desktop, tablet and mobile. It uses H.264 High, yuv420p, the native 24 fps, faststart, and closed eight-frame GOPs (one keyframe every 0.333 seconds) with no B-frames for responsive seeking.
+The replacement film supplied on 28 September 2026 is 29.666667 seconds long at 854 × 480 and 24 fps. The user approved serving this film at its native 480p resolution on all devices. One MP4 is published; the previous 720p film and its stills have been removed from the site.
 
 | Version | Source dimensions preserved | Web size | Original size | Reduction |
 | --- | --- | --- | --- | --- |
-| All devices | 1280 × 720 | 8,502,942 bytes | 11,933,107 bytes | 28.7% |
+| All devices | 854 × 480 | 7,108,006 bytes | 54,545,525 bytes | 87.0% |
 
-- The supplied native 720p master is optimized directly, with no upscaling, cropping, frame-rate conversion, color grading or denoising.
-- x264 uses `preset slow`, `tune grain`, and CRF 20 to retain dark texture and atmospheric detail. Measured average SSIM versus the corresponding master is 0.988899 (720p). SSIM is a similarity metric, not a guarantee of perceptual equivalence.
-- The WebP poster is 13,414 bytes and is extracted from the supplied 720p source.
-- Every screen size uses `/videos/cementing-a-nation-720p.mp4`, including after orientation changes and resizing. The optional film player reuses this URL.
-- No MP4 `src` appears in server HTML. Reduced-motion visitors do not download the video unless they choose Watch Film.
-- The 480p web encode has been removed. Mobile visitors now receive the same 8.5 MB video as desktop visitors.
-- Duration is read from the video's metadata, currently 12.041667 seconds. A single in-flight seek follows smoothed ScrollTrigger progress without React renders per scroll frame. The final 16% holds the final frame.
-- No 1080p or 4K web asset is generated or served.
+- H.264 High, yuv420p, native 24 fps, faststart, closed eight-frame GOPs (one keyframe every 0.333 seconds) and no B-frames support responsive seeking.
+- The source is encoded directly with no upscaling, cropping, frame-rate conversion, color grading or denoising. Audio is omitted from the muted web experience; the master retains its audio.
+- x264 uses preset slow, tune grain and CRF 20. Average SSIM against the new master is 0.989713; this is a similarity metric rather than a guarantee of perceptual equivalence.
+- Every device and the optional film player use `/videos/cementing-a-nation-v2-480p.mp4`. Versioned asset names prevent cached copies of the previous film appearing after the update.
+- The new WebP opening poster is 14,942 bytes. The finale poster and editorial stone still are also extracted from the replacement master.
+- No MP4 src appears in server HTML. Reduced-motion visitors do not download video unless they choose Watch Film.
+- Duration is read automatically from video metadata. A single in-flight seek follows smoothed ScrollTrigger progress without React renders per scroll frame. The final 16% holds the new final frame behind every following section.
+- Chapter transitions follow the statue, stone/railway and industry sequences. The industry chapter now enters at approximately 22 seconds, with its navigation target around 25.7 seconds.
+- No 720p, 1080p or 4K web version is generated or served.
 
-## Preserved masters
+## Preserved master
 
-The supplied files remain untouched in the local project root, excluded from Git and deployment:
+The new supplied file remains untouched in the local project root, excluded from Git and deployment:
 
-- `480p.mp4` — SHA-256 `4c1be5e8b0549dfdd05ff79abc8688e94d7c4e21821d02d0e348f62da3e13d78`
-- `720p.mp4` — SHA-256 `bd6368cc7408cd277c5b0f7a0120710486cd324bd05b32d8211c14844808ea77`
+- `480p.mp4` — SHA-256 `9a59974c2d0c65005bef6cd2d4c05865aa59038d3818effb05bcd6a3247fe947`
 
-The optimized 720p file is included under `public/videos/`. The original 480p file remains local for preservation and is not generated or served by the website.
-
-To reproduce the 720p encode and poster, place the original `720p.mp4` master in the root and run:
+To reproduce the web encode and stills, place this master in the root and run:
 
 ```powershell
 node scripts/optimize-video.mjs
 node scripts/verify-video.mjs
 ```
 
-The verifier checks master hashes when present, exactly one published 720p MP4, H.264/yuv420p/24fps, maximum keyframe spacing, and `moov` placement before `mdat` for faststart. Its report is written to `artifacts/video-validation.json`.
+The verifier checks the master hash when present, exactly one published native 480p MP4, the full replacement duration, H.264/yuv420p/24fps, keyframe spacing and faststart. Its report is written to `artifacts/video-validation.json`.
 
 ## Scope and interaction
 
@@ -62,7 +60,7 @@ The verifier checks master hashes when present, exactly one published 720p MP4, 
 - Mont-Fort-inspired spatial motion: slow background camera drift, perspective heading reveals, independently moving image planes, restrained pointer tilt and layered atmospheric depth. Desktop motion is reduced on touch devices and disabled for reduced-motion visitors.
 - Procedural cloud banks replace the former dust grains and light shafts. A WebGL density shader makes the clouds billow continuously; mouse movement deforms the clouds through a diffusing displacement field, while a slower camera response moves near and far layers at different depths. The movement is recreated from the Mont-Fort reference, with original shaders and a palette suited to the Dalmia film. No reference assets or runtime code are shipped. Text areas stay clearer for readability.
 - Cloud animation is capped at 60 fps on desktop and 24 fps with a smaller pixel/layer budget on mobile. It pauses in hidden tabs and open menus/film dialogs, and is disabled for reduced motion. If WebGL is unavailable or lost, the film and page remain available without the decorative effect.
-- A separate static finale poster preserves the continuous background when video scrubbing is unavailable. Foreground film detail is a still from the supplied 720p master.
+- A separate static finale poster preserves the continuous background when video scrubbing is unavailable. Foreground film detail is a still from the new supplied master.
 - Exactly three homepage sections: About, Our World, Closing.
 - Local fonts and imagery, keyboard navigation and focus management, reduced-motion support, video error recovery and mobile native playback.
 - No CMS, database, API, business-detail pages, forms or invented company statistics.
@@ -77,7 +75,7 @@ npm run test:e2e
 node scripts/verify-video.mjs
 ```
 
-The Playwright suite uses installed Google Chrome (`channel: chrome`) and starts/reuses port 3020. On machines without Chrome, install it or change the Playwright channel and install Chromium. Tests cover decoded forward/reverse seeks, pinning, final-frame hold, menu focus/Escape, section links, 320/390/820px layouts, mobile playback, reduced motion, failed loading, 720p-only requests on all screen sizes, resize behavior and a throttled 3 Mbps/100ms mobile connection. Screenshots and generated reports live in ignored `artifacts/` and `test-results/` folders.
+The Playwright suite uses installed Google Chrome (`channel: chrome`) and starts/reuses port 3020. On machines without Chrome, install it or change the Playwright channel and install Chromium. Tests cover decoded forward/reverse seeks, pinning, final-frame hold, menu focus/Escape, section links, 320/390/820px layouts, mobile playback, reduced motion, failed loading, 480p-only requests on all screen sizes, resize behavior and a throttled 3 Mbps/100ms mobile connection. Screenshots and generated reports live in ignored `artifacts/` and `test-results/` folders.
 
 ## Publishing
 

@@ -364,16 +364,16 @@ main { position: relative; isolation: isolate; }
   .footer-main nav { font-size: 12px; }
 }
 
-/* Give the stone and industrial silhouette their own uninterrupted space. */
+/* The replacement film places the stone and plant centrally; keep type to the left. */
 @media (min-width: 768px) {
-  .chapter-2 { left: 49%; width: 47%; padding-right: 5%; }
+  .chapter-2 { left: var(--gutter); width: 44%; padding-right: 3%; }
   .chapter-2 .chapter-year { font-size: clamp(75px, 8.1vw, 148px); }
   .chapter-2 h2 { font-size: clamp(34px, 3.8vw, 66px); }
-  .chapter-3 { left: 55%; width: 41%; padding-right: 5%; }
+  .chapter-3 { left: var(--gutter); width: 44%; padding-right: 3%; }
 }
 @media (max-width: 767px) {
   .cinematic-video, .film-poster { object-position: 55% center; }
-  .cinematic-stage[data-chapter="2"] .cinematic-video { object-position: 22% center; }
+  .cinematic-stage[data-chapter="2"] .cinematic-video { object-position: 50% center; }
   .chapter-2 { top: 23%; bottom: auto; }
 }
 

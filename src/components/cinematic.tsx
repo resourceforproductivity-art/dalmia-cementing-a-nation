@@ -9,12 +9,13 @@ import { Arrow } from "./arrow";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const filmSource = assetPath("/videos/cementing-a-nation-720p.mp4");
+const filmSource = assetPath("/videos/cementing-a-nation-v2-480p.mp4");
 
+// Chapter positions follow the new film: statue, stone/railway, then industry.
 const chapters = [
   { year: "1904", label: "A Vision Takes Form", position: 0.08, name: "THE VISION" },
   { year: "MID-1930s", label: "One Stone Changed Everything", position: 0.36, name: "THE FOUNDATION" },
-  { year: "1939", label: "Industry Rose. Communities Grew.", position: 0.64, name: "THE MOMENTUM" },
+  { year: "1939", label: "Industry Rose. Communities Grew.", position: 0.73, name: "THE MOMENTUM" },
 ];
 
 export function Cinematic() {
@@ -31,9 +32,9 @@ export function Cinematic() {
     const film = video.current;
     const backdrop = stage.current;
     if (!section || !film || !backdrop) return;
-    // Every device uses the same 720p asset. Keep src out of server HTML
+    // Every device uses the same native 480p asset. Keep src out of server HTML
     // so reduced-motion visitors can use the poster without downloading video.
-    section.dataset.quality = "720p";
+    section.dataset.quality = "480p";
     const media = gsap.matchMedia();
     media.add({ reduced: "(prefers-reduced-motion: reduce)", motion: "(prefers-reduced-motion: no-preference)" }, context => {
       const reduced = !!context.conditions?.reduced;
@@ -105,7 +106,7 @@ export function Cinematic() {
         // The last 16% is a deliberate final-frame hold.
         desiredTime = Math.min(p / 0.84, 1) * Math.max(0, duration - 1 / 24);
         progressBar.style.transform = `scaleX(${p})`;
-        const chapter = p < 0.27 ? 0 : p < 0.55 ? 1 : 2;
+        const chapter = p < 0.27 ? 0 : p < 0.615 ? 1 : 2;
         if (previousChapter !== chapter) {
           previousChapter = chapter;
           chapterButtons.forEach((button, index) => button.setAttribute("aria-current", String(index === chapter)));
@@ -150,8 +151,8 @@ export function Cinematic() {
         timeline.to(model, { progress: 1, duration: 1, onUpdate: render }, 0)
           .to(panels[0], { autoAlpha: 0, y: -24, duration: 0.055 }, 0.22)
           .fromTo(panels[1], { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.28)
-          .to(panels[1], { autoAlpha: 0, y: -24, duration: 0.055 }, 0.49)
-          .fromTo(panels[2], { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.55)
+          .to(panels[1], { autoAlpha: 0, y: -24, duration: 0.04 }, 0.575)
+          .fromTo(panels[2], { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.045 }, 0.625)
           .to(panels[2], { autoAlpha: 0, y: -24, duration: 0.055 }, 0.75)
           .to(finale, { autoAlpha: 1, y: 0, duration: 0.065 }, 0.81)
           .to(backdrop.querySelector(".film-shade"), { opacity: 0.46, duration: 0.1 }, 0.79)
@@ -191,7 +192,7 @@ export function Cinematic() {
     if (!scene || scene.progress >= 0.8) {
       document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
     } else if (scene.progress < 0.27) toChapter(1);
-    else if (scene.progress < 0.55) toChapter(2);
+    else if (scene.progress < 0.615) toChapter(2);
     else window.scrollTo({ top: scene.start + (scene.end - scene.start) * 0.92, behavior: "smooth" });
   };
   const openFilm = () => {
@@ -211,9 +212,9 @@ export function Cinematic() {
     <div ref={stage} className="cinematic-stage" data-mode="scrub" data-ready="false" data-chapter="1" aria-hidden="true">
       <div className="stage-camera">
         <div className="stage-media">
-          <Image className="film-poster" src={assetPath("/images/film-poster.webp")} alt="" fill unoptimized preload sizes="100vw" />
-          <Image className="fallback-poster" src={assetPath("/images/film-finale.jpg")} alt="" fill sizes="100vw" />
-          <video ref={video} className="cinematic-video" poster={assetPath("/images/film-poster.webp")} preload="none" muted playsInline disablePictureInPicture tabIndex={-1} />
+          <Image className="film-poster" src={assetPath("/images/film-poster-v2.webp")} alt="" fill unoptimized preload sizes="100vw" />
+          <Image className="fallback-poster" src={assetPath("/images/film-finale-v2.jpg")} alt="" fill sizes="100vw" />
+          <video ref={video} className="cinematic-video" poster={assetPath("/images/film-poster-v2.webp")} preload="none" muted playsInline disablePictureInPicture tabIndex={-1} />
         </div>
       </div>
       <div className="film-shade" /><div className="film-vignette" />
@@ -248,7 +249,7 @@ export function Cinematic() {
     </section>
     <dialog ref={filmDialog} className="film-dialog" aria-label="Cementing a Nation film" onClose={() => { player.current?.pause(); document.body.style.overflow = ""; watchButton.current?.focus({ preventScroll: true }); }}>
       <button className="close-button" onClick={closeFilm} aria-label="Close film"><span>CLOSE FILM</span><span className="close-mark" /></button>
-      <video ref={player} poster={assetPath("/images/film-poster.webp")} controls muted playsInline preload="none" aria-label="Cementing a Nation, supplied cinematic film" />
+      <video ref={player} poster={assetPath("/images/film-poster-v2.webp")} controls muted playsInline preload="none" aria-label="Cementing a Nation, supplied cinematic film" />
       <p>A Dalmia Bharat story · Scroll to explore the full experience.</p>
     </dialog>
   </>;

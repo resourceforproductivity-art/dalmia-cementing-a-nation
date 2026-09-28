@@ -35,7 +35,7 @@ test('mobile atmosphere uses a smaller render budget and leaves navigation acces
   expect(await back.evaluate((canvas: HTMLCanvasElement) => canvas.width)).toBeLessThan(300);
   await page.getByRole('link', { name: 'SKIP INTRO', exact: true }).click();
   await expect.poll(() => page.locator('#about').evaluate(e => Math.abs(e.getBoundingClientRect().top - 98))).toBeLessThan(4);
-  await expect(page.locator('.cinematic-video')).toHaveAttribute('src', /720p\.mp4$/);
+  await expect(page.locator('.cinematic-video')).toHaveAttribute('src', /480p\.mp4$/);
 });
 
 test('cloud deformation responds to mouse movement more strongly than ambient drift', async ({ page }) => {
@@ -43,7 +43,7 @@ test('cloud deformation responds to mouse movement more strongly than ambient dr
   const back = page.locator('.atmosphere-distant');
   await expect(back).toHaveAttribute('data-state', 'running');
   await page.getByRole('link', { name: 'SKIP INTRO', exact: true }).click();
-  await expect.poll(() => page.locator('.cinematic-video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(11.9);
+  await expect.poll(() => page.locator('.cinematic-video').evaluate((video: HTMLVideoElement) => video.duration - video.currentTime)).toBeLessThan(.1);
   const sample = () => back.evaluate((source: HTMLCanvasElement) => {
     const canvas = document.createElement('canvas');
     canvas.width = 96; canvas.height = 60;
@@ -77,7 +77,7 @@ test('the film and navigation remain usable without WebGL', async ({ page }) => 
   await expect(page.locator('.atmosphere-distant')).toHaveAttribute('data-state', 'off');
   await page.getByRole('link', { name: 'SKIP INTRO', exact: true }).click();
   await expect.poll(() => page.locator('#about').evaluate(e => Math.abs(e.getBoundingClientRect().top - 98))).toBeLessThan(4);
-  await expect.poll(() => page.locator('.cinematic-video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(11.9);
+  await expect.poll(() => page.locator('.cinematic-video').evaluate((video: HTMLVideoElement) => video.duration - video.currentTime)).toBeLessThan(.1);
   await page.getByRole('button', { name: 'Open menu', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Close menu', exact: true })).toBeVisible();
 });

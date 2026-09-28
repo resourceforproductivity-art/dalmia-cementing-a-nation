@@ -41,9 +41,9 @@ test("film advances, reverses, stays pinned, and holds its final frame", async (
 test("chapter buttons, skip intro, cinematic header and all section links work", async ({ page }) => {
   await filmReady(page);
   await page.getByRole("button", { name: /Chapter 03:/ }).click();
-  await expect.poll(() => page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(8.5);
+  await expect.poll(() => page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime / v.duration)).toBeGreaterThan(.8);
   await page.getByRole("button", { name: /Chapter 01:/ }).click();
-  await expect.poll(() => page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime)).toBeLessThan(1.4);
+  await expect.poll(() => page.locator(".cinematic-video").evaluate((v: HTMLVideoElement) => v.currentTime / v.duration)).toBeLessThan(.11);
   await page.getByRole("link", { name: "SKIP INTRO", exact: true }).click();
   await expect(page.locator(".site-header")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("navigation", { name: "Main navigation", exact: true }).getByRole("link", { name: "Businesses" }).click();
