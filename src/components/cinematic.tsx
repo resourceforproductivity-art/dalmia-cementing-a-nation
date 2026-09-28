@@ -43,6 +43,8 @@ export function Cinematic() {
       const finale = section.querySelector<HTMLElement>(".cinematic-finale")!;
       const progressBar = section.querySelector<HTMLElement>(".film-progress-fill")!;
       const loading = section.querySelector<HTMLElement>(".film-loading")!;
+      const opening = section.querySelector<HTMLElement>(".opening-art")!;
+      let disposeOpening = () => {};
       let duration = 0;
       let desiredTime = 0;
       let seekFrame = 0;
@@ -67,6 +69,7 @@ export function Cinematic() {
         trigger.current = null;
         section.dataset.mode = backdrop.dataset.mode = "fallback";
         section.dataset.ready = backdrop.dataset.ready = "true";
+        gsap.set(opening, { autoAlpha: 0 });
         gsap.set(panels, { autoAlpha: 0 });
         panels.forEach(panel => panel.setAttribute("aria-hidden", "true"));
         gsap.set(finale, { autoAlpha: 1, y: 0 });
@@ -139,6 +142,28 @@ export function Cinematic() {
         gsap.set(panels, { autoAlpha: 0, y: 0 });
         gsap.set(panels[0], { autoAlpha: 1 });
         gsap.set(finale, { autoAlpha: 0, y: 30 });
+        // A finite line reveal fills the first empty landscape, then yields to the film.
+        gsap.set(opening, { autoAlpha: 1, y: 0, scale: 1 });
+        gsap.fromTo(opening.querySelectorAll(".opening-stroke"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 2.2, stagger: .16, ease: "power2.inOut" });
+        gsap.fromTo(opening.querySelector(".opening-caption"), { opacity: 0, y: 10 }, { opacity: 1, y: 0, delay: .6, duration: 1.4, ease: "power2.out" });
+        const parallax = opening.querySelector<HTMLElement>(".opening-parallax")!;
+        gsap.set(parallax, { transformPerspective: 1100, rotationY: -8, rotationX: 6 });
+        const moveX = gsap.quickTo(parallax, "x", { duration: 1.1, ease: "power2.out" });
+        const moveY = gsap.quickTo(parallax, "y", { duration: 1.1, ease: "power2.out" });
+        const rotateY = gsap.quickTo(parallax, "rotationY", { duration: 1.1, ease: "power2.out" });
+        const finePointer = window.matchMedia("(min-width: 768px) and (pointer: fine)");
+        const move = (event: PointerEvent) => {
+          if (model.progress > .13 || !finePointer.matches || event.pointerType !== "mouse" || document.querySelector("dialog[open]")) return;
+          const x = event.clientX / window.innerWidth - .5, y = event.clientY / window.innerHeight - .5;
+          moveX(x * 24); moveY(y * 14); rotateY(-8 + x * 9);
+        };
+        const reset = () => { moveX(0); moveY(0); rotateY(-8); };
+        window.addEventListener("pointermove", move, { passive: true });
+        document.documentElement.addEventListener("pointerleave", reset);
+        disposeOpening = () => {
+          window.removeEventListener("pointermove", move);
+          document.documentElement.removeEventListener("pointerleave", reset);
+        };
         timeline = gsap.timeline({
           defaults: { ease: "none" },
           scrollTrigger: {
@@ -149,6 +174,7 @@ export function Cinematic() {
         });
         trigger.current = timeline.scrollTrigger!;
         timeline.to(model, { progress: 1, duration: 1, onUpdate: render }, 0)
+          .to(opening, { autoAlpha: 0, scale: 1.065, y: -22, duration: .1 }, .02)
           .to(panels[0], { autoAlpha: 0, y: -24, duration: 0.055 }, 0.22)
           .fromTo(panels[1], { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.06 }, 0.28)
           .to(panels[1], { autoAlpha: 0, y: -24, duration: 0.04 }, 0.575)
@@ -169,6 +195,7 @@ export function Cinematic() {
       }
       return () => {
         disposed = true;
+        disposeOpening();
         film.pause();
         cancelAnimationFrame(seekFrame);
         clearTimeout(watchdog);
@@ -223,6 +250,26 @@ export function Cinematic() {
     <section ref={root} id="cinematic" className="cinematic" data-mode="scrub" data-ready="false" data-chapter="1" aria-label="Cementing a Nation, a cinematic Dalmia Bharat story">
       <div className="film-heading eyebrow"><span className="red-rule" /> CEMENTING A NATION <span className="film-heading-divider" /> A DALMIA BHARAT STORY</div>
       <p className="sr-only">Cementing a Nation. 1904: A Vision Takes Form. Mid-1930s: One Stone Changed Everything. 1939: Industry Rose. Communities Grew.</p>
+      <div className="opening-art" aria-hidden="true">
+        <div className="opening-parallax">
+          <svg className="opening-form" viewBox="0 0 800 760" fill="none" aria-hidden="true">
+            <g className="opening-guides">
+              <path d="M45 610 680 495M112 667 742 548M130 695 190 640M250 675 305 620M370 653 420 600M490 632 535 580M610 610 650 560" />
+              <path d="M164 166V640M440 120V590M613 196V552M132 170 488 112" />
+              <path d="M153 166h22m-11-11v22M429 120h22m-11-11v22M602 196h22m-11-11v22" />
+            </g>
+            <path className="opening-plane opening-plane-back" d="M308 572V280L557 235V527Z" />
+            <path className="opening-plane opening-plane-middle" d="M232 616V219L513 168V565Z" />
+            <path className="opening-stroke opening-back" pathLength="1" d="M308 572V280L557 235V527L308 572Z" />
+            <path className="opening-stroke opening-middle" pathLength="1" d="M232 616V219L513 168V565L232 616Z" />
+            <path className="opening-stroke opening-front" pathLength="1" d="M164 640V166L440 120V590L164 640Z" />
+            <path className="opening-stroke opening-connection" pathLength="1" d="M164 166 308 280M440 120 557 235M440 590 557 527M164 640 308 572" />
+            <path className="opening-stroke opening-datum" pathLength="1" d="M112 677 650 577M164 640V517" />
+            <rect className="opening-origin" x="159" y="635" width="10" height="10" />
+          </svg>
+        </div>
+        <div className="opening-caption"><span className="eyebrow">THE SHAPE OF POSSIBILITY</span><span className="opening-caption-rule" /><span className="opening-caption-detail">A foundation for what comes next.</span></div>
+      </div>
       <div className="chapters">
         {chapters.map((chapter, index) => <div key={chapter.year} className={`chapter chapter-${index + 1}`} aria-hidden={index !== 0}>
           <p className="eyebrow chapter-kicker">0{index + 1}<span />{chapter.name}</p>
@@ -245,7 +292,7 @@ export function Cinematic() {
       <button ref={watchButton} className="watch-film eyebrow" onClick={openFilm}><span className="play-icon" /> WATCH FILM</button>
       <div className="film-loading" role="status"><span />PREPARING YOUR JOURNEY</div>
       <div className="film-progress" aria-hidden="true"><div className="film-progress-fill" /></div>
-      <noscript><style>{`.cinematic .chapter,.chapter-rail,.scroll-cue,.film-loading,.watch-film{display:none!important}.cinematic-finale{opacity:1!important;visibility:visible!important}.cinematic{height:100svh}.cinematic-video{display:none}.fallback-poster{opacity:1!important}`}</style></noscript>
+      <noscript><style>{`.cinematic .chapter,.chapter-rail,.scroll-cue,.film-loading,.watch-film,.opening-art{display:none!important}.cinematic-finale{opacity:1!important;visibility:visible!important}.cinematic{height:100svh}.cinematic-video{display:none}.fallback-poster{opacity:1!important}`}</style></noscript>
     </section>
     <dialog ref={filmDialog} className="film-dialog" aria-label="Cementing a Nation film" onClose={() => { player.current?.pause(); document.body.style.overflow = ""; watchButton.current?.focus({ preventScroll: true }); }}>
       <button className="close-button" onClick={closeFilm} aria-label="Close film"><span>CLOSE FILM</span><span className="close-mark" /></button>

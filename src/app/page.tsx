@@ -2,7 +2,6 @@ import { assetPath } from "@/lib/asset-path";
 import Image from "next/image";
 import { Header } from "@/components/header";
 import { Cinematic } from "@/components/cinematic";
-import { Atmosphere } from "@/components/atmosphere";
 import { Reveals } from "@/components/reveals";
 import { Arrow } from "@/components/arrow";
 
@@ -17,7 +16,6 @@ export default function Home() {
     <Header />
     <main>
       <Cinematic />
-      <Atmosphere />
       <Reveals>
         <section id="about" className="about-section section-shell" aria-labelledby="about-title">
           <div className="section-topline" data-reveal><p className="eyebrow"><span className="red-square" /> THE DALMIA SPIRIT</p><span className="eyebrow section-number">01 — ABOUT</span></div>
