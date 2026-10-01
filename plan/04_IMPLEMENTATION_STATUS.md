@@ -1,6 +1,6 @@
 # Implementation status
 
-Documentation updated: 2026-10-01. Last committed and deployed application baseline: c7e6180ac1817de80df04f03b77056e62405f459. The 2026-10-01 changes below are in the working tree only: not committed, not pushed, not deployed.
+Documentation updated: 2026-10-01. Last committed and deployed application baseline: c7e6180ac1817de80df04f03b77056e62405f459. The 2026-10-01 changes below are committed (df3bc69, a8f5e7d) but not yet live; see Publication.
 
 The Recorded validation table is the last validation of the deployed baseline; the 2026-10-01 section records what was run on the working tree. Tests were not rerun merely to write these Markdown documents. Recheck current code and relevant behavior after future changes.
 
@@ -44,7 +44,18 @@ Timing observations are measurements, not guarantees. The media pipeline was ver
 
 Application deployment: [Actions run 36396140882](https://github.com/resourceforproductivity-art/dalmia-cementing-a-nation/actions/runs/36396140882), completed successfully. [Live homepage](https://resourceforproductivity-art.github.io/dalmia-cementing-a-nation/).
 
-## Changes and validation — 2026-10-01 (working tree, unpublished)
+## Publication — 2026-10-01
+
+The user asked for the work to be pushed to GitHub.
+
+- df3bc69 (film replacement, scrolling, type, header, continuation, plan documents) was pushed to main. [Actions run 36809763636](https://github.com/resourceforproductivity-art/dalmia-cementing-a-nation/actions/runs/36809763636) failed at npm ci, so nothing was deployed.
+- Cause, reproduced locally with npm 10: installing lenis with npm 11 on Windows removed the optional @emnapi/core and @emnapi/runtime lockfile entries that npm 10 on the runner requires.
+- Fix a8f5e7d rebuilds package-lock.json from the c7e6180 lockfile plus only the lenis entry. npx npm@10 ci --dry-run passes with it and fails with the df3bc69 lockfile.
+- a8f5e7d and this documentation commit are local only. The second push could not authenticate: Git Credential Manager required an interactive GitHub sign-in, which the assistant must not perform. The user needs to run git push origin main.
+- Until that push succeeds and its Pages run is checked, the live site remains c7e6180 with the 480p film. The live site has not been re-verified.
+- When adding dependencies on this machine, check the lockfile diff for removed @emnapi entries, or validate with npx npm@10 ci --dry-run before pushing.
+
+## Changes and validation — 2026-10-01
 
 Context: the user asked how to bring the site closer to mont-fort.com, chose to keep the existing video, and approved proceeding with scroll, type, header and continuation-background improvements.
 
@@ -73,14 +84,14 @@ Found and fixed during this work: the first version let a wheel glide continue u
 
 Not done or not verified:
 
-- Nothing was committed, pushed or deployed; the live site is still c7e6180.
+- Superseded by the Publication section above.
 - Wheel feel was checked by script and screenshots, not by hand on a physical mouse or trackpad, and not in Safari or Firefox.
 - The camera turn point is measured once; after a large resize it is approximate until reload.
 - The cost of backdrop-filter and CSS blur was not profiled on low-end hardware.
 - npm audit reports a critical advisory for next 16.2.0–16.3.5 (next/og ImageResponse, GHSA-vcvr-r3jv-pc5j). The repository has no next/og usage and ships a static export; the version was left unchanged. The suggested fix is next 16.3.8.
 - Still open from the Mont-Fort review and needing the user's input: factual copy to replace the abstract lines, confirmation of the 1904 chapter date, and an optional film-grain overlay. The resolution question was answered by the user's 720p film.
 
-## Film replacement — 2026-10-01 (working tree, unpublished)
+## Film replacement — 2026-10-01
 
 The user added 720p.mp4 to the project root and said the video had been changed. Inspection showed a re-made film, not an upscale: 1280 × 720, 24 fps, 721 frames (30.04 s), new statue-assembly, stone, railway and plant shots, plus houses around the plant.
 
@@ -92,7 +103,7 @@ Changed:
 - reveals.tsx: camera push target moved to the new tower position (xPercent 0.6, yPercent 2).
 - page.tsx: About image is film-detail-v3.jpg with updated alt text.
 - tests/video-delivery.spec.ts: 720p, 30.042 s, v3 filename.
-- Superseded v2 web film and stills moved to artifacts/superseded and removed from the Git index (staged, not committed).
+- Superseded v2 web film and stills moved to artifacts/superseded and removed from Git in df3bc69.
 
 Checks actually run after these changes, locally:
 
@@ -107,7 +118,7 @@ Checks actually run after these changes, locally:
 
 Not done or not verified:
 
-- Not committed, pushed or deployed. The live site still shows the 480p film.
+- Not live yet; see the Publication section. The live site still shows the 480p film.
 - No physical phone test. The web film is 12.5 MB against 7.1 MB before; only the simulated 3 Mbps case was measured.
 - No objective quality metric (SSIM/VMAF) was computed for the encode; CRF was chosen by visual comparison of one crop.
 - At about 19 s on desktop the growing stone reaches the left edge of the chapter 2 year just as that text fades.
@@ -118,7 +129,7 @@ Not done or not verified:
 
 | File | Count | Coverage |
 | --- | ---: | --- |
-| tests/homepage.spec.ts | 12 | Seeking/pin, chapters, menu, three responsive widths, native playback, fallback, continuous background, plus wheel smoothing/dialog isolation/rack focus (this twelfth test is not committed yet) |
+| tests/homepage.spec.ts | 12 | Seeking/pin, chapters, menu, three responsive widths, native playback, fallback, continuous background, plus wheel smoothing/dialog isolation/rack focus (the twelfth was added in df3bc69) |
 | tests/opening.spec.ts | 1 | No canvas, mouse response, opening hide/restore, skip and reduced motion |
 | tests/video-delivery.spec.ts | 4 | Desktop/mobile source, resize, duration/resolution, throttled seeking and reduced-motion requests |
 
@@ -160,4 +171,4 @@ Recent commits: 8cf92a6 integrated the new film; c7e6180 removed atmospheric eff
 
 ## Outstanding work
 
-The 2026-10-01 improvements are implemented locally and await the user's decision to commit and publish. Otherwise no required feature work remains. The LLM handoff and its standing maintenance instruction are implemented. Suggestions in [next steps](05_MULTI_ROLE_NEXT_STEPS.md) are optional, not an active backlog or authorization to expand scope.
+Outstanding: push a8f5e7d and later commits, confirm the Pages run succeeds, then verify the live site. Otherwise no required feature work remains. The LLM handoff and its standing maintenance instruction are implemented. Suggestions in [next steps](05_MULTI_ROLE_NEXT_STEPS.md) are optional, not an active backlog or authorization to expand scope.

@@ -1,6 +1,6 @@
 # Dalmia Bharat — Project index
 
-Updated: 2026-10-01. Application snapshot: c7e6180 plus uncommitted, unpublished working-tree changes made on 2026-10-01 (see [status](04_IMPLEMENTATION_STATUS.md)).
+Updated: 2026-10-01. Application snapshot: df3bc69 (pushed 2026-10-01, Pages build failed) plus the lockfile fix a8f5e7d (committed locally, push pending). The live site is still c7e6180; see [status](04_IMPLEMENTATION_STATUS.md).
 
 ## Start here
 
@@ -19,7 +19,7 @@ Read this index, then the relevant documents and actual source files. Investigat
 | Branch / hosting | main / GitHub Pages via GitHub Actions |
 | Development URL | http://127.0.0.1:3020/ |
 | Current film | 30.04 seconds, 1280 × 720, 24 fps; one 12.5 MB web MP4 (user-supplied 720p re-make, 2026-10-01) |
-| Latest visual change | New 720p film with retimed chapters and a right-hand stone chapter; Lenis wheel smoothing, lining numerals, header backing, rack focus and camera move (all local only, not yet published) |
+| Latest visual change | New 720p film with retimed chapters and a right-hand stone chapter; Lenis wheel smoothing, lining numerals, header backing, rack focus and camera move (committed; not live until the pending push deploys) |
 
 ## Document map
 

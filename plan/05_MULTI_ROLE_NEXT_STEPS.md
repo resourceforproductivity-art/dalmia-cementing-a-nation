@@ -79,6 +79,8 @@ Do not commit the master, credentials, local artifacts or build output. Legacy V
 | Page keeps moving under an open dialog | Lenis stop/start observer and data-lenis-prevent |
 | Anchor lands at the wrong offset or jitters | Lenis anchors option was enabled, or scroll-behavior changed |
 | Plant stays blurred at the footer | .stage-focus fade tied to #closing; check ScrollTrigger refresh |
+| Pages build fails at npm ci | Lockfile written by a newer local npm; compare against the last working lockfile and test with npx npm@10 ci --dry-run |
+| git push hangs or asks for a username | Git Credential Manager needs an interactive GitHub sign-in by the user |
 | Browser test cannot launch | Chrome availability or deliberate Playwright channel configuration |
 | Optimizer cannot find source | Fresh clones contain optimized film only; locate local master |
 
