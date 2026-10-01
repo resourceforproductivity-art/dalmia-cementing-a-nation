@@ -43,6 +43,8 @@ em { font-weight: 400; }
 .menu-lines i:last-child { width: 19px; margin-left: auto; }
 .menu-toggle:hover i:last-child { width: 27px; }
 .site-header::before { content: ""; position: absolute; inset: 0 0 -42px; z-index: -1; background: linear-gradient(180deg, #0b131bcc, #0b131b66 65%, transparent); pointer-events: none; }
+.site-header::after { content: ""; position: absolute; inset: 0 0 -42px; z-index: -1; background: #0b131b8f; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent); mask-image: linear-gradient(180deg, #000 58%, transparent); opacity: 0; transition: opacity .45s; pointer-events: none; }
+.site-header[data-surface="content"]::after { opacity: 1; }
 .menu-dialog { position: fixed; inset: 0; max-width: none; max-height: none; width: 100%; height: 100%; padding: 0 var(--gutter); margin: 0; border: 0; background: #20292c; color: var(--paper); }
 .menu-dialog[open] { display: flex; flex-direction: column; animation: menu-in .35s ease-out; }
 .menu-dialog::backdrop { background: #20292c; }
@@ -69,6 +71,8 @@ main { position: relative; isolation: isolate; }
 .cinematic-stage { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; background: #101b1f; }
 .stage-camera { position: absolute; inset: -10px; perspective: 1600px; }
 .stage-media { position: absolute; inset: 0; transform-origin: 50% 48%; }
+.stage-focus, .stage-focus-image { position: absolute; inset: 0; }
+.stage-focus-image { inset: -3%; opacity: 0; background-size: cover; background-position: center; filter: blur(clamp(5px, .55vw, 10px)) brightness(.86); }
 .continuation-shade { position: absolute; inset: 0; opacity: 0; background: linear-gradient(90deg, #0913184d, #0913181a 48%, #09131838); }
 .cinematic { position: relative; isolation: isolate; z-index: 2; width: 100%; height: 100svh; min-height: 640px; color: var(--paper); background: transparent; overflow: clip; }
 .cinematic-video, .film-poster, .fallback-poster { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; object-position: center; }
@@ -77,6 +81,12 @@ main { position: relative; isolation: isolate; }
 .fallback-poster { opacity: 0; }
 .film-shade { position: absolute; inset: 0; background: #0d171a; opacity: .2; }
 .film-vignette { position: absolute; inset: 0; background: linear-gradient(180deg, #0b151b5e, transparent 28%, transparent 62%, #09131dbb); pointer-events: none; }
+/* Daylit sand is bright: a side scrim follows whichever edge carries the chapter type. */
+.film-side-shade::before, .film-side-shade::after { content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity .9s; }
+.film-side-shade::before { background: linear-gradient(270deg, #0a141a99, #0a141a3d 34%, transparent 58%); }
+.film-side-shade::after { background: linear-gradient(90deg, #0a141a99, #0a141a3d 34%, transparent 58%); }
+.cinematic-stage[data-chapter="2"] .film-side-shade::before, .cinematic-stage[data-chapter="3"] .film-side-shade::after { opacity: 1; }
+.chapter-year, .chapter h2 { text-shadow: 0 2px 34px #0a141a80, 0 1px 2px #0a141a59; }
 .film-heading { position: absolute; z-index: 2; top: 153px; left: var(--gutter); display: flex; gap: 15px; align-items: center; color: #e3e0d9; font-size: 10px; letter-spacing: .14em; }
 .red-rule { display: inline-block; height: 1px; width: 29px; background: var(--red); }
 .film-heading-divider { width: 18px; height: 1px; background: #ffffff70; margin: 0 2px; }
@@ -84,7 +94,7 @@ main { position: relative; isolation: isolate; }
 .chapter:not(:first-child) { opacity: 0; visibility: hidden; }
 .chapter-kicker { display: flex; align-items: center; gap: 12px; color: #d3c7b3; font-size: 10px; }
 .chapter-kicker > span { width: 30px; height: 1px; background: #d3c7b37a; }
-.chapter-year { font-family: var(--display); font-size: clamp(112px, 13.2vw, 220px); font-weight: 400; line-height: .95; letter-spacing: -.055em; margin: 15px 0 21px -5px; }
+.chapter-year { font-family: var(--display); font-size: clamp(112px, 13.2vw, 220px); font-weight: 400; line-height: .95; letter-spacing: -.055em; margin: 15px 0 21px -5px; font-variant-numeric: lining-nums; }
 .chapter h2 { font-family: var(--display); font-size: clamp(38px, 4.1vw, 72px); font-weight: 400; line-height: 1.02; letter-spacing: -.025em; }
 .chapter h2 em { color: #e3d6c0; }
 .chapter-2 { left: var(--gutter); width: 64%; top: 31%; }
@@ -364,15 +374,16 @@ main { position: relative; isolation: isolate; }
   .footer-main nav { font-size: 12px; }
 }
 
-/* The replacement film places the stone and plant centrally; keep type to the left. */
+/* 720p film: the stone sits left of centre, so its chapter moves to the clear right
+   side; the plant rises along the horizon, so the industry chapter stays left. */
 @media (min-width: 768px) {
-  .chapter-2 { left: var(--gutter); width: 44%; padding-right: 3%; }
-  .chapter-2 .chapter-year { font-size: clamp(75px, 8.1vw, 148px); }
-  .chapter-2 h2 { font-size: clamp(34px, 3.8vw, 66px); }
+  .chapter-2 { left: 66%; width: 31%; padding-right: 4%; top: 33%; }
+  .chapter-2 .chapter-year { font-size: clamp(56px, 5.4vw, 100px); }
+  .chapter-2 h2 { font-size: clamp(30px, 3vw, 54px); }
   .chapter-3 { left: var(--gutter); width: 44%; padding-right: 3%; }
 }
 @media (max-width: 767px) {
-  .cinematic-video, .film-poster { object-position: 55% center; }
+  .cinematic-video, .film-poster { object-position: 47% center; }
   .cinematic-stage[data-chapter="2"] .cinematic-video { object-position: 50% center; }
   .chapter-2 { top: 23%; bottom: auto; }
 }
@@ -390,6 +401,7 @@ main { position: relative; isolation: isolate; }
   .panel-image, .about-image { transform: perspective(1200px) rotateY(-3deg); }
   .panel-innovation .panel-image { transform: perspective(1200px) rotateY(3deg); }
   .cinematic-stage[data-chapter="3"] .cinematic-video, .fallback-poster { object-position: 45% center; }
+  .stage-focus-image { background-position: 45% center; }
 }
 @media (prefers-reduced-motion: reduce) {
   .panel-image, .about-image, .panel-innovation .panel-image { transform: none; }
@@ -428,3 +440,4 @@ main { position: relative; isolation: isolate; }
   .opening-guides { opacity: .17; }
 }
 @media (prefers-reduced-motion: reduce) { .opening-art { display: none; } }
+@media (max-width: 767px) { .film-side-shade { display: none; } }

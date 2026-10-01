@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-for (const setting of [{ label: 'desktop', width: 1440, height: 900, quality: '480p' }, { label: 'mobile', width: 390, height: 844, quality: '480p' }]) {
-  test(`${setting.label} downloads only 480p for scrubbing and playback, including after resize`, async ({ page }) => {
+for (const setting of [{ label: 'desktop', width: 1440, height: 900, quality: '720p' }, { label: 'mobile', width: 390, height: 844, quality: '720p' }]) {
+  test(`${setting.label} downloads only 720p for scrubbing and playback, including after resize`, async ({ page }) => {
     await page.setViewportSize({ width: setting.width, height: setting.height });
     const videoPaths = new Set<string>();
     page.on('request', request => { if (request.url().includes('.mp4')) videoPaths.add(new URL(request.url()).pathname); });
@@ -11,7 +11,7 @@ for (const setting of [{ label: 'desktop', width: 1440, height: 900, quality: '4
     await expect(page.locator('.cinematic')).toHaveAttribute('data-quality', setting.quality);
     await expect(page.locator('.cinematic')).toHaveAttribute('data-mode', 'scrub');
     console.log(`${setting.label} first frame ready: ${Date.now() - started} ms`);
-    expect(Number(await page.locator('.cinematic').getAttribute('data-duration'))).toBeCloseTo(29.667, 1);
+    expect(Number(await page.locator('.cinematic').getAttribute('data-duration'))).toBeCloseTo(30.042, 1);
     const film = page.locator('.cinematic-video');
     expect(await film.evaluate((v: HTMLVideoElement) => v.videoHeight)).toBe(Number.parseInt(setting.quality));
     for (const p of [.7, .12, .94]) {
@@ -25,7 +25,7 @@ for (const setting of [{ label: 'desktop', width: 1440, height: 900, quality: '4
     await page.getByRole('button', { name: 'WATCH FILM' }).click();
     await expect.poll(() => page.locator('.film-dialog video').evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(.1);
     await page.getByRole('button', { name: 'Close film', exact: true }).click();
-    expect([...videoPaths]).toEqual([`/videos/cementing-a-nation-v2-${setting.quality}.mp4`]);
+    expect([...videoPaths]).toEqual([`/videos/cementing-a-nation-v3-${setting.quality}.mp4`]);
   });
 }
 

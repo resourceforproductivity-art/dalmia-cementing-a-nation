@@ -158,3 +158,29 @@ for (const width of [1440, 390]) {
     await expect(page.locator('.chapter-button').first()).toHaveAttribute('aria-current', 'true');
   });
 }
+
+test("wheel scrolling is smoothed, dialogs are isolated and the continuation refocuses", async ({ page }) => {
+  await filmReady(page);
+  await expect(page.locator("html")).toHaveClass(/lenis/);
+  await page.mouse.move(700, 450);
+  await page.mouse.wheel(0, 600);
+  await page.waitForTimeout(80);
+  const early = await page.evaluate(() => scrollY);
+  expect(early).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(early);
+  await page.getByRole("button", { name: "Open menu", exact: true }).click();
+  const held = await page.evaluate(() => scrollY);
+  await page.mouse.wheel(0, 900);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => scrollY)).toBe(held);
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".site-header")).toHaveAttribute("data-surface", "film");
+  await expect(page.locator(".chapter-year").first()).toHaveCSS("font-variant-numeric", "lining-nums");
+  // The defocused layer rises behind Our World and clears again for the closing.
+  await page.evaluate(() => document.getElementById("cement")?.scrollIntoView({ behavior: "instant" }));
+  await expect(page.locator(".site-header")).toHaveAttribute("data-surface", "content");
+  await expect.poll(() => page.locator(".stage-focus-image").evaluate(e => Number(getComputedStyle(e).opacity))).toBe(1);
+  await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+  await expect.poll(() => page.locator(".stage-focus").evaluate(e => Number(getComputedStyle(e).opacity))).toBe(0);
+  expect(await page.locator(".cinematic-stage canvas").count()).toBe(0);
+});

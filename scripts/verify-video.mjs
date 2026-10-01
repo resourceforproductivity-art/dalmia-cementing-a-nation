@@ -4,9 +4,9 @@ import { spawnSync } from 'node:child_process';
 import ffmpeg from 'ffmpeg-static';
 
 const expected = {
-  '480p.mp4': '9a59974c2d0c65005bef6cd2d4c05865aa59038d3818effb05bcd6a3247fe947',
+  '720p.mp4': '11ddc035852c57a2e0c3f58768eec1b5a09b76ce8eaec5bde4e3e829a79cfdf2',
 };
-const report = { originals: [], encodes: [], posterBytes: fs.statSync('public/images/film-poster-v2.webp').size };
+const report = { originals: [], encodes: [], posterBytes: fs.statSync('public/images/film-poster-v3.webp').size };
 for (const [file, expectedHash] of Object.entries(expected)) {
   if (!fs.existsSync(file)) continue; // Masters are intentionally local-only.
   const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -14,9 +14,9 @@ for (const [file, expectedHash] of Object.entries(expected)) {
   report.originals.push({ file, sha256: hash, preserved: true });
 }
 const webFiles = fs.readdirSync('public/videos').filter(file => file.endsWith('.mp4'));
-if (webFiles.length !== 1) throw new Error('Exactly one 480p MP4 file must be served.');
+if (webFiles.length !== 1) throw new Error('Exactly one 720p MP4 file must be served.');
 for (const file of webFiles) {
-  if (file !== 'cementing-a-nation-v2-480p.mp4') throw new Error(`Unexpected web video: ${file}`);
+  if (file !== 'cementing-a-nation-v3-720p.mp4') throw new Error(`Unexpected web video: ${file}`);
   const path = `public/videos/${file}`;
   const bytes = fs.readFileSync(path);
   const boxes = [];
@@ -34,10 +34,10 @@ for (const file of webFiles) {
   const maxGap = Math.max(...intervals);
   if (!times.length || maxGap > .501) throw new Error('Keyframes too far apart');
   const metadata = inspect.stderr.match(/Video: h264[^\n]+/)?.[0];
-  if (!metadata?.includes('yuv420p') || !metadata.includes('24 fps') || !metadata.includes('854x480')) throw new Error('Codec, format or frame rate changed');
+  if (!metadata?.includes('yuv420p') || !metadata.includes('24 fps') || !metadata.includes('1280x720')) throw new Error('Codec, format or frame rate changed');
   const duration = inspect.stderr.match(/Duration: (\d+):(\d+):([\d.]+)/);
   const seconds = duration ? Number(duration[1]) * 3600 + Number(duration[2]) * 60 + Number(duration[3]) : 0;
-  if (seconds < 29.6 || seconds > 29.8) throw new Error('The full replacement film must be preserved');
+  if (seconds < 29.9 || seconds > 30.2) throw new Error('The full replacement film must be preserved');
   report.encodes.push({ durationSeconds: seconds, file, bytes: bytes.length, metadata: metadata.trim(), keyframeCount: times.length, maxKeyframeIntervalSeconds: Number(maxGap.toFixed(4)), faststart: true });
 }
 fs.mkdirSync('artifacts', { recursive: true });

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "@fontsource-variable/manrope";
 import "@fontsource/cormorant-garamond/400.css";
 import "@fontsource/cormorant-garamond/400-italic.css";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

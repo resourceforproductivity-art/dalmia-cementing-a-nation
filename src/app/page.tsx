@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Header } from "@/components/header";
 import { Cinematic } from "@/components/cinematic";
 import { Reveals } from "@/components/reveals";
+import { SmoothScroll } from "@/components/smooth-scroll";
 import { Arrow } from "@/components/arrow";
 
 const worlds = [
@@ -13,6 +14,7 @@ const worlds = [
 
 export default function Home() {
   return <>
+    <SmoothScroll />
     <Header />
     <main>
       <Cinematic />
@@ -21,7 +23,7 @@ export default function Home() {
           <div className="section-topline" data-reveal><p className="eyebrow"><span className="red-square" /> THE DALMIA SPIRIT</p><span className="eyebrow section-number">01 — ABOUT</span></div>
           <div className="about-heading" data-reveal><h2 id="about-title">Building<br /><em>Beyond Cement.</em></h2></div>
           <div className="about-body">
-            <div className="about-image-wrap" data-reveal><div className="depth-float" data-parallax="-28"><figure className="about-image" data-tilt="-5"><Image src={assetPath("/images/film-detail-v2.jpg")} alt="Monumental stone beside a curved railway from the Cementing a Nation film" fill sizes="(max-width: 767px) 90vw, 48vw" /><span className="image-corner corner-tl" /><span className="image-corner corner-br" /></figure></div><div className="image-caption eyebrow"><span>A VISION MADE TANGIBLE</span><span>DALMIA BHARAT</span></div></div>
+            <div className="about-image-wrap" data-reveal><div className="depth-float" data-parallax="-28"><figure className="about-image" data-tilt="-5"><Image src={assetPath("/images/film-detail-v3.jpg")} alt="Monumental stone beside a railway line from the Cementing a Nation film" fill sizes="(max-width: 767px) 90vw, 48vw" /><span className="image-corner corner-tl" /><span className="image-corner corner-br" /></figure></div><div className="image-caption eyebrow"><span>A VISION MADE TANGIBLE</span><span>DALMIA BHARAT</span></div></div>
             <div className="about-copy" data-reveal><span className="copy-rule" /><p className="about-lead">Some foundations<br />hold more than buildings.</p><p>They hold ambition. They connect communities. They give shape to what a nation can become.</p><p>At Dalmia Bharat, the story of cement is part of a larger story — of people, possibility and the resolve to keep moving forward.</p><a className="round-link" href="#our-world">DISCOVER OUR WORLD<span><Arrow /></span></a></div>
           </div>
           <div className="about-footnote eyebrow" data-reveal><span>ROOTED IN PURPOSE.</span><span>BUILT FOR POSSIBILITY.</span></div>

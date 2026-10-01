@@ -20,8 +20,18 @@ export function Reveals({ children }: { children: React.ReactNode }) {
 
         // A continuous scrim gives text contrast without introducing section backgrounds.
         gsap.fromTo(document.querySelector(".continuation-shade"), { opacity: 0 }, { opacity: 1, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "top 30%", scrub: .8 } });
+        // Rack focus: the plant softens behind Our World, then sharpens for the closing.
+        // Two nested layers keep the two scrubbed opacities from fighting over one property.
+        gsap.fromTo(document.querySelector(".stage-focus-image"), { opacity: 0 }, { opacity: 1, ease: "none", scrollTrigger: { trigger: "#our-world", start: "top 85%", end: "top 30%", scrub: .8 } });
+        gsap.fromTo(document.querySelector(".stage-focus"), { opacity: 1 }, { opacity: 0, ease: "none", scrollTrigger: { trigger: "#closing", start: "top 90%", end: "top 30%", scrub: .8 } });
         if (!match.conditions?.desktop) return;
-        gsap.fromTo(document.querySelector(".stage-media"), { scale: 1, yPercent: 0 }, { scale: 1.12, yPercent: -1.5, ease: "none", scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom bottom", scrub: 1.4 } });
+        // Push in toward the kiln tower through About and Our World, then pull back
+        // to the whole plant as the closing arrives.
+        const closing = root.current!.querySelector<HTMLElement>("#closing")!;
+        const turn = gsap.utils.clamp(.3, .9, closing.offsetTop / root.current!.offsetHeight);
+        gsap.timeline({ scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom bottom", scrub: 1.4 } })
+          .fromTo(document.querySelector(".stage-media"), { scale: 1, xPercent: 0, yPercent: 0 }, { scale: 1.15, xPercent: .6, yPercent: 2, duration: turn, ease: "sine.inOut" })
+          .to(document.querySelector(".stage-media"), { scale: 1.03, xPercent: 0, yPercent: 0, duration: 1 - turn, ease: "sine.inOut" });
         // Independent scene and foreground movement creates a gentle camera drift.
         const camera = document.querySelector<HTMLElement>(".stage-camera");
         if (camera) {
